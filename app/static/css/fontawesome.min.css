@@ -1,0 +1,75 @@
+/* Simplified Font Awesome CSS for login page */
+.fa-solid {
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    -webkit-font-smoothing: antialiased;
+    display: inline-block;
+    font-style: normal;
+    font-variant: normal;
+    text-rendering: auto;
+    line-height: 1;
+}
+
+.fa-shield-halved:before {
+    content: "🛡️";
+}
+
+.fa-user-graduate:before {
+    content: "🎓";
+}
+
+.fa-sign-in-alt:before {
+    content: "🔑";
+}
+
+.fa-key:before {
+    content: "🔐";
+}
+
+.fa-universal-access:before {
+    content: "♿";
+}
+
+.fa-building-columns:before {
+    content: "🏛️";
+}
+
+.fa-bars:before {
+    content: "☰";
+}
+
+.fa-times:before {
+    content: "✖";
+}
+
+.fa-gauge-high:before {
+    content: "📊";
+}
+
+.fa-school:before {
+    content: "🏫";
+}
+
+.fa-map-location-dot:before {
+    content: "📍";
+}
+
+.fa-building:before {
+    content: "🏢";
+}
+
+.fa-users:before {
+    content: "👥";
+}
+
+.fa-graduation-cap:before {
+    content: "🎓";
+}
+
+.fa-user-plus:before {
+    content: "➕";
+}
+
+.fa-language:before {
+    content: "🌐";
+}

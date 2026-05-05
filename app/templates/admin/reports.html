@@ -1,0 +1,645 @@
+{% extends "base.html" %}
+{% block title %}Reports & Analytics{% endblock %}
+{% block styles %}
+<style>
+.report-card {
+    border: 0;
+    border-radius: 0.9rem;
+    box-shadow: 0 0.35rem 1rem rgba(31, 45, 61, 0.08);
+    transition: all 0.3s ease;
+    height: 100%;
+}
+.report-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1.5rem rgba(31, 45, 61, 0.12);
+}
+.report-icon {
+    font-size: 2.5rem;
+    margin-bottom: 1rem;
+}
+.chart-container {
+    position: relative;
+    height: 300px;
+    margin-bottom: 2rem;
+}
+.preview-container {
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    max-height: 500px;
+    overflow-y: auto;
+}
+.loading-spinner {
+    display: none;
+    text-align: center;
+    padding: 2rem;
+}
+</style>
+{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Reports</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-1">Reports & Analytics</h1>
+        <p class="text-muted mb-0">Generate admission reports and analytics</p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-outline-primary btn-sm" onclick="refreshData()">
+            <i class="fa-solid fa-sync me-1"></i>Refresh Data
+        </button>
+    </div>
+</div>
+
+<!-- Report Type Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card report-card">
+            <div class="card-body text-center">
+                <div class="report-icon text-primary">
+                    <i class="fa-solid fa-file-pdf"></i>
+                </div>
+                <h6 class="card-title">Admission Letters</h6>
+                <p class="text-muted small">Generate individual or bulk admission letters</p>
+                <button type="button" class="btn btn-primary btn-sm" onclick="showLetterGenerator()">
+                    Generate Letters
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card report-card">
+            <div class="card-body text-center">
+                <div class="report-icon text-success">
+                    <i class="fa-solid fa-chart-bar"></i>
+                </div>
+                <h6 class="card-title">Statistics Report</h6>
+                <p class="text-muted small">Comprehensive admission statistics</p>
+                <button type="button" class="btn btn-success btn-sm" onclick="showStatistics()">
+                    Generate Report
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card report-card">
+            <div class="card-body text-center">
+                <div class="report-icon text-info">
+                    <i class="fa-solid fa-file-excel"></i>
+                </div>
+                <h6 class="card-title">Excel Export</h6>
+                <p class="text-muted small">Export admission lists to Excel</p>
+                <button type="button" class="btn btn-info btn-sm" onclick="showExportOptions()">
+                    Export Data
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card report-card">
+            <div class="card-body text-center">
+                <div class="report-icon text-warning">
+                    <i class="fa-solid fa-chart-pie"></i>
+                </div>
+                <h6 class="card-title">Analytics Dashboard</h6>
+                <p class="text-muted small">Visual analytics and insights</p>
+                <button type="button" class="btn btn-warning btn-sm" onclick="showAnalytics()">
+                    View Analytics
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Analytics Dashboard -->
+<div id="analyticsSection" class="row g-3 mb-4" style="display: none;">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Admission Overview</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="admissionChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Quota Distribution</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="quotaChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">State Distribution</h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="stateChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Letter Generator Section -->
+<div id="letterSection" class="card border-0 shadow-sm mb-4" style="display: none;">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Admission Letter Generator</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label for="programmeSelect" class="form-label">Select Programme</label>
+                <select class="form-select" id="programmeSelect" onchange="loadCandidates()">
+                    <option value="">Choose a programme...</option>
+                    {% for programme in programmes %}
+                    <option value="{{ programme.id }}">{{ programme.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-6">
+                <label for="candidateSelect" class="form-label">Select Candidate</label>
+                <select class="form-select" id="candidateSelect">
+                    <option value="">Choose a candidate...</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-primary" onclick="generateSingleLetter()" disabled id="singleLetterBtn">
+                <i class="fa-solid fa-file-pdf me-1"></i>Generate Single Letter
+            </button>
+            <button type="button" class="btn btn-success" onclick="generateBulkLetters()" disabled id="bulkLettersBtn">
+                <i class="fa-solid fa-file-archive me-1"></i>Generate All Letters
+            </button>
+        </div>
+        
+        <div id="letterPreview" class="mt-3 preview-container" style="display: none;">
+            <!-- Preview will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Report Section -->
+<div id="statisticsSection" class="card border-0 shadow-sm mb-4" style="display: none;">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Statistics Report Generator</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3 mb-3">
+            <div class="col-md-6">
+                <label for="statsProgramme" class="form-label">Programme</label>
+                <select class="form-select" id="statsProgramme">
+                    <option value="">All Programmes</option>
+                    {% for programme in programmes %}
+                    <option value="{{ programme.id }}">{{ programme.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-6">
+                <label class="form-label">Report Format</label>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="statsFormat" id="statsPDF" value="pdf" checked>
+                    <label class="form-check-label" for="statsPDF">
+                        <i class="fa-solid fa-file-pdf me-1"></i>PDF Report
+                    </label>
+                </div>
+            </div>
+        </div>
+        
+        <button type="button" class="btn btn-primary" onclick="generateStatistics()">
+            <i class="fa-solid fa-chart-bar me-1"></i>Generate Statistics Report
+        </button>
+        
+        <div id="statsPreview" class="mt-3 preview-container" style="display: none;">
+            <!-- Preview will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<!-- Export Options Section -->
+<div id="exportSection" class="card border-0 shadow-sm mb-4" style="display: none;">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Excel Export Options</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3 mb-3">
+            <div class="col-md-4">
+                <label for="exportProgramme" class="form-label">Programme</label>
+                <select class="form-select" id="exportProgramme" onchange="updateExportOptions()">
+                    <option value="">Choose a programme...</option>
+                    {% for programme in programmes %}
+                    <option value="{{ programme.id }}">{{ programme.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="col-md-4">
+                <label for="quotaFilter" class="form-label">Quota Filter</label>
+                <select class="form-select" id="quotaFilter">
+                    <option value="">All Quotas</option>
+                    <option value="merit">Merit</option>
+                    <option value="catchment">Catchment</option>
+                    <option value="elds">ELDS</option>
+                </select>
+            </div>
+            
+            <div class="col-md-4">
+                <label class="form-label">Export Type</label>
+                <select class="form-select" id="exportType">
+                    <option value="admitted">Admitted Candidates</option>
+                    <option value="all">All Candidates</option>
+                    <option value="screened">Screened Candidates</option>
+                </select>
+            </div>
+        </div>
+        
+        <button type="button" class="btn btn-info" onclick="exportToExcel()" disabled id="exportBtn">
+            <i class="fa-solid fa-file-excel me-1"></i>Export to Excel
+        </button>
+        
+        <div id="exportPreview" class="mt-3 preview-container" style="display: none;">
+            <!-- Preview will be loaded here -->
+        </div>
+    </div>
+</div>
+
+<!-- Loading Spinner -->
+<div class="loading-spinner" id="loadingSpinner">
+    <div class="fa-solid fa-spinner fa-spin fa-2x mb-3"></div>
+    <h5>Processing...</h5>
+    <p class="text-muted">Please wait while we generate your report.</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let dashboardData = null;
+let currentCharts = [];
+
+// Load dashboard data on page load
+document.addEventListener('DOMContentLoaded', function() {
+    loadDashboardData();
+});
+
+function loadDashboardData() {
+    fetch('/reports/dashboard-data')
+        .then(response => response.json())
+        .then(data => {
+            dashboardData = data;
+            updateAnalyticsCharts(data);
+        })
+        .catch(error => {
+            console.error('Error loading dashboard data:', error);
+            showAlert('Failed to load dashboard data', 'danger');
+        });
+}
+
+function refreshData() {
+    showLoading();
+    loadDashboardData();
+    setTimeout(hideLoading, 1000);
+}
+
+function showAnalytics() {
+    hideAllSections();
+    document.getElementById('analyticsSection').style.display = 'block';
+    if (dashboardData) {
+        updateAnalyticsCharts(dashboardData);
+    }
+}
+
+function showLetterGenerator() {
+    hideAllSections();
+    document.getElementById('letterSection').style.display = 'block';
+}
+
+function showStatistics() {
+    hideAllSections();
+    document.getElementById('statisticsSection').style.display = 'block';
+}
+
+function showExportOptions() {
+    hideAllSections();
+    document.getElementById('exportSection').style.display = 'block';
+}
+
+function hideAllSections() {
+    document.getElementById('analyticsSection').style.display = 'none';
+    document.getElementById('letterSection').style.display = 'none';
+    document.getElementById('statisticsSection').style.display = 'none';
+    document.getElementById('exportSection').style.display = 'none';
+}
+
+function updateAnalyticsCharts(data) {
+    // Clear existing charts
+    currentCharts.forEach(chart => chart.destroy());
+    currentCharts = [];
+    
+    // Admission Overview Chart
+    const admissionCtx = document.getElementById('admissionChart').getContext('2d');
+    const admissionChart = new Chart(admissionCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Total Candidates', 'Screened', 'Admitted', 'Rejected', 'Pending'],
+            datasets: [{
+                label: 'Candidate Status',
+                data: [
+                    data.summary.total_candidates,
+                    data.summary.screened,
+                    data.summary.admitted,
+                    data.summary.rejected,
+                    data.summary.pending
+                ],
+                backgroundColor: [
+                    'rgba(54, 162, 235, 0.8)',
+                    'rgba(75, 192, 192, 0.8)',
+                    'rgba(34, 197, 94, 0.8)',
+                    'rgba(239, 68, 68, 0.8)',
+                    'rgba(249, 115, 22, 0.8)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+    currentCharts.push(admissionChart);
+    
+    // Quota Distribution Chart
+    const quotaCtx = document.getElementById('quotaChart').getContext('2d');
+    const quotaData = data.quota_distribution;
+    const quotaChart = new Chart(quotaCtx, {
+        type: 'doughnut',
+        data: {
+            labels: Object.keys(quotaData),
+            datasets: [{
+                data: Object.values(quotaData),
+                backgroundColor: [
+                    'rgba(59, 130, 246, 0.8)',
+                    'rgba(34, 197, 94, 0.8)',
+                    'rgba(249, 115, 22, 0.8)'
+                ]
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    });
+    currentCharts.push(quotaChart);
+    
+    // State Distribution Chart
+    const stateCtx = document.getElementById('stateChart').getContext('2d');
+    const stateData = data.state_distribution;
+    const stateChart = new Chart(stateCtx, {
+        type: 'bar',
+        data: {
+            labels: Object.keys(stateData).slice(0, 10),
+            datasets: [{
+                label: 'Candidates by State',
+                data: Object.values(stateData).slice(0, 10),
+                backgroundColor: 'rgba(147, 51, 234, 0.8)'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+    currentCharts.push(stateChart);
+}
+
+function loadCandidates() {
+    const programmeId = document.getElementById('programmeSelect').value;
+    const candidateSelect = document.getElementById('candidateSelect');
+    
+    if (!programmeId) {
+        candidateSelect.innerHTML = '<option value="">Choose a candidate...</option>';
+        document.getElementById('singleLetterBtn').disabled = true;
+        document.getElementById('bulkLettersBtn').disabled = true;
+        return;
+    }
+    
+    showLoading();
+    
+    fetch(`/admission/merit-list/${programmeId}/export`)
+        .then(response => response.json())
+        .then(data => {
+            candidateSelect.innerHTML = '<option value="">Choose a candidate...</option>';
+            data.candidates.forEach(candidate => {
+                const option = document.createElement('option');
+                option.value = candidate.id;
+                option.textContent = `${candidate.name} (${candidate.jamb_reg})`;
+                candidateSelect.appendChild(option);
+            });
+            
+            document.getElementById('singleLetterBtn').disabled = false;
+            document.getElementById('bulkLettersBtn').disabled = false;
+        })
+        .catch(error => {
+            console.error('Error loading candidates:', error);
+            showAlert('Failed to load candidates', 'danger');
+        })
+        .finally(() => {
+            hideLoading();
+        });
+}
+
+function generateSingleLetter() {
+    const candidateId = document.getElementById('candidateSelect').value;
+    if (!candidateId) {
+        showAlert('Please select a candidate', 'warning');
+        return;
+    }
+    
+    showLoading();
+    
+    fetch(`/reports/admission-letter/${candidateId}`)
+        .then(response => response.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `admission_letter_${candidateId}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showAlert('Admission letter generated successfully', 'success');
+        })
+        .catch(error => {
+            console.error('Error generating letter:', error);
+            showAlert('Failed to generate admission letter', 'danger');
+        })
+        .finally(() => {
+            hideLoading();
+        });
+}
+
+function generateBulkLetters() {
+    const programmeId = document.getElementById('programmeSelect').value;
+    if (!programmeId) {
+        showAlert('Please select a programme', 'warning');
+        return;
+    }
+    
+    showLoading();
+    
+    fetch(`/reports/bulk-letters/${programmeId}`)
+        .then(response => response.blob())
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `bulk_admission_letters_${programmeId}.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            showAlert('Bulk admission letters generated successfully', 'success');
+        })
+        .catch(error => {
+            console.error('Error generating bulk letters:', error);
+            showAlert('Failed to generate bulk letters', 'danger');
+        })
+        .finally(() => {
+            hideLoading();
+        });
+}
+
+function generateStatistics() {
+    const programmeId = document.getElementById('statsProgramme').value;
+    
+    showLoading();
+    
+    const url = programmeId ? `/reports/statistics?programme_id=${programmeId}` : '/reports/statistics';
+    
+    fetch(url)
+        .then(response => response.blob())
+        .then(blob => {
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = `admission_statistics_${programmeId || 'all'}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(downloadUrl);
+            
+            showAlert('Statistics report generated successfully', 'success');
+        })
+        .catch(error => {
+            console.error('Error generating statistics:', error);
+            showAlert('Failed to generate statistics report', 'danger');
+        })
+        .finally(() => {
+            hideLoading();
+        });
+}
+
+function updateExportOptions() {
+    const programmeId = document.getElementById('exportProgramme').value;
+    document.getElementById('exportBtn').disabled = !programmeId;
+}
+
+function exportToExcel() {
+    const programmeId = document.getElementById('exportProgramme').value;
+    const quota = document.getElementById('quotaFilter').value;
+    
+    if (!programmeId) {
+        showAlert('Please select a programme', 'warning');
+        return;
+    }
+    
+    showLoading();
+    
+    const url = quota ? `/reports/export/${programmeId}?quota=${quota}` : `/reports/export/${programmeId}`;
+    
+    fetch(url)
+        .then(response => response.blob())
+        .then(blob => {
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            a.download = `admission_list_${programmeId}_${quota || 'all'}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(downloadUrl);
+            
+            showAlert('Excel export generated successfully', 'success');
+        })
+        .catch(error => {
+            console.error('Error exporting to Excel:', error);
+            showAlert('Failed to export to Excel', 'danger');
+        })
+        .finally(() => {
+            hideLoading();
+        });
+}
+
+function showLoading() {
+    document.getElementById('loadingSpinner').style.display = 'block';
+}
+
+function hideLoading() {
+    document.getElementById('loadingSpinner').style.display = 'none';
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

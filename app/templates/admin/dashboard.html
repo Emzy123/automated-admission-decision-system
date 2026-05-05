@@ -1,0 +1,485 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block page_title %}Dashboard{% endblock %}
+{% block breadcrumb %}
+<nav class="breadcrumb-nav">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item">
+            <a href="{{ url_for('admin.dashboard') }}">
+                <i class="fa-solid fa-home me-1"></i>Home
+            </a>
+        </li>
+        <li class="breadcrumb-item active">Dashboard</li>
+    </ol>
+</nav>
+{% endblock %}
+{% block styles %}
+<style>
+.welcome-header {
+    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 16px;
+    margin-bottom: 2rem;
+}
+.session-badge {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+.chart-container {
+    position: relative;
+    height: 300px;
+}
+.quick-action-card {
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+.quick-action-card:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+}
+</style>
+{% endblock %}
+{% block content %}
+<!-- Welcome Header -->
+<div class="welcome-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1 class="mb-2">Welcome back, {{ current_user.full_name }}!</h1>
+            <p class="mb-0 opacity-90">Today is <span id="currentDate"></span></p>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <div class="session-badge">
+                <i class="fa-solid fa-calendar-check me-2"></i>
+                {{ selected_session.name if selected_session else "2025/2026" }} Session
+                {% if selected_session and selected_session.is_active %}<i class="fa-solid fa-circle ms-2" style="font-size: 0.5rem;"></i>{% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Session Selector -->
+<div class="row mb-4">
+    <div class="col-12">
+        <form method="get" class="d-flex align-items-center gap-3">
+            <label for="session_id" class="form-label mb-0 fw-semibold">Academic Session:</label>
+            <select class="form-select" style="max-width: 250px;" id="session_id" name="session_id" onchange="this.form.submit()">
+                {% if sessions %}
+                    {% for session in sessions %}
+                        <option value="{{ session.id }}" {% if selected_session and selected_session.id == session.id %}selected{% endif %}>
+                            {{ session.name }}{% if session.is_active %} (Active){% endif %}
+                        </option>
+                    {% endfor %}
+                {% else %}
+                    <option value="">No sessions available</option>
+                {% endif %}
+            </select>
+        </form>
+    </div>
+</div>
+
+<!-- Stat Cards -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-3 col-md-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="stat-icon primary">
+                    <i class="fa-solid fa-users"></i>
+                </div>
+                <div class="stat-value">{{ total_candidates }}</div>
+                <div class="stat-label">Total Candidates</div>
+                <div class="stat-description">
+                    <i class="fa-solid fa-user-group me-1"></i>Applicants in selected session
+                </div>
+                <div class="stat-trend up">
+                    <i class="fa-solid fa-arrow-up"></i>
+                    12% from last month
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="stat-icon success">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <div class="stat-value">{{ admitted_count }}</div>
+                <div class="stat-label">Admitted Candidates</div>
+                <div class="stat-description">
+                    <i class="fa-solid fa-graduation-cap me-1"></i>Successfully admitted
+                </div>
+                <div class="stat-trend up">
+                    <i class="fa-solid fa-arrow-up"></i>
+                    {% set tc = total_candidates if total_candidates > 0 else 1 %}
+                    {{ "%.1f"|format((admitted_count / tc) * 100) }}% admission rate
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="stat-icon danger">
+                    <i class="fa-solid fa-circle-xmark"></i>
+                </div>
+                <div class="stat-value">{{ rejected_count }}</div>
+                <div class="stat-label">Rejected Candidates</div>
+                <div class="stat-description">
+                    <i class="fa-solid fa-times-circle me-1"></i>Did not meet requirements
+                </div>
+                <div class="stat-trend down">
+                    <i class="fa-solid fa-arrow-down"></i>
+                    {{ "%.1f"|format((rejected_count / tc) * 100) }}% rejection rate
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+    <div class="col-lg-3 col-md-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <div class="stat-icon warning">
+                    <i class="fa-solid fa-clock"></i>
+                </div>
+                <div class="stat-value">{{ pending_count }}</div>
+                <div class="stat-label">Pending Review</div>
+                <div class="stat-description">
+                    <i class="fa-solid fa-hourglass-half me-1"></i>Awaiting decisions
+                </div>
+                <div class="stat-trend up">
+                    <i class="fa-solid fa-minus"></i>
+                    No pending applications
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="row g-4 mb-4">
+    <div class="col-lg-8">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fa-solid fa-chart-bar me-2 text-primary"></i>
+                    Admitted Candidates by Quota Category
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="quotaChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-lg-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fa-solid fa-chart-pie me-2 text-primary"></i>
+                    Admission Status Distribution
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="chart-container">
+                    <canvas id="statusChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="row g-4 mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fa-solid fa-bolt me-2 text-primary"></i>
+                    Quick Actions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row g-3">
+                    <div class="col-md-6 col-lg-3">
+                        <div class="quick-action-card card h-100">
+                            <div class="card-body text-center">
+                                <div class="stat-icon primary mb-3">
+                                    <i class="fa-solid fa-file-arrow-up"></i>
+                                </div>
+                                <h6 class="card-title">Upload Candidates</h6>
+                                <p class="card-text text-muted small">Import candidate data from CSV files</p>
+                                <a href="{{ url_for('admin.candidates') }}" class="btn btn-primary btn-sm">
+                                    <i class="fa-solid fa-upload me-1"></i>Upload Now
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 col-lg-3">
+                        <div class="quick-action-card card h-100">
+                            <div class="card-body text-center">
+                                <div class="stat-icon success mb-3">
+                                    <i class="fa-solid fa-play"></i>
+                                </div>
+                                <h6 class="card-title">Run Screening</h6>
+                                <p class="card-text text-muted small">Process candidates with automated rules</p>
+                                <a href="{{ url_for('admission.screening_dashboard') }}" class="btn btn-success btn-sm">
+                                    <i class="fa-solid fa-play me-1"></i>Start Screening
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 col-lg-3">
+                        <div class="quick-action-card card h-100">
+                            <div class="card-body text-center">
+                                <div class="stat-icon info mb-3">
+                                    <i class="fa-solid fa-list-check"></i>
+                                </div>
+                                <h6 class="card-title">Merit List</h6>
+                                <p class="card-text text-muted small">Generate and approve merit lists</p>
+                                <a href="{{ url_for('admission.merit_list_dashboard') }}" class="btn btn-info btn-sm">
+                                    <i class="fa-solid fa-list me-1"></i>View Lists
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 col-lg-3">
+                        <div class="quick-action-card card h-100">
+                            <div class="card-body text-center">
+                                <div class="stat-icon warning mb-3">
+                                    <i class="fa-solid fa-chart-bar"></i>
+                                </div>
+                                <h6 class="card-title">Generate Reports</h6>
+                                <p class="card-text text-muted small">Create comprehensive admission reports</p>
+                                <a href="{{ url_for('admin.reports') }}" class="btn btn-warning btn-sm">
+                                    <i class="fa-solid fa-file-alt me-1"></i>Reports
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Activity Table -->
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="fa-solid fa-clock-rotate-left me-2 text-primary"></i>
+            Recent Admission Decisions
+        </h5>
+        <a href="{{ url_for('admin.candidates') }}" class="btn btn-outline-primary btn-sm">
+            <i class="fa-solid fa-eye me-1"></i>View All
+        </a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Candidate</th>
+                        <th>Programme</th>
+                        <th>Quota</th>
+                        <th>Aggregate</th>
+                        <th>Status</th>
+                        <th>Updated</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if recent_decisions %}
+                        {% for record in recent_decisions %}
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="user-avatar me-2" style="width: 32px; height: 32px; font-size: 0.875rem;">
+                                            <i class="fa-solid fa-user"></i>
+                                        </div>
+                                        {{ record.candidate.full_name if record.candidate else "N/A" }}
+                                    </div>
+                                </td>
+                                <td>{{ record.programme.code if record.programme else "N/A" }}</td>
+                                <td>{{ (record.quota_category or "N/A")|title }}</td>
+                                <td>{{ "%.2f"|format(record.aggregate_score or 0) }}</td>
+                                <td>
+                                    <span class="badge {% if record.status == 'admitted' %}bg-success{% elif record.status == 'rejected' %}bg-danger{% else %}bg-warning text-dark{% endif %}">
+                                        {{ record.status|title }}
+                                    </span>
+                                </td>
+                                <td>{{ (record.updated_at or record.created_at).strftime("%d %b %Y, %H:%M") }}</td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                <i class="fa-solid fa-inbox fa-2x mb-2 d-block"></i>
+                                No recent admission decisions for this session.
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Set current date
+document.addEventListener('DOMContentLoaded', function() {
+    const currentDateElement = document.getElementById('currentDate');
+    if (currentDateElement) {
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        currentDateElement.textContent = new Date().toLocaleDateString('en-US', options);
+    }
+    
+    // Initialize Charts
+    initializeCharts();
+});
+
+function initializeCharts() {
+    // Quota Chart
+    const quotaCtx = document.getElementById('quotaChart');
+    if (quotaCtx) {
+        // Use actual quota values from server
+        const quotaData = {{ quota_chart_values | default([0, 0, 0]) | tojson }};
+
+        new Chart(quotaCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Merit', 'Catchment', 'ELDS'],
+                datasets: [{
+                    label: 'Admitted Candidates',
+                    data: quotaData,
+                    borderRadius: 8,
+                    backgroundColor: [
+                        'rgba(13, 110, 253, 0.8)',
+                        'rgba(25, 135, 84, 0.8)',
+                        'rgba(255, 193, 7, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(13, 110, 253, 1)',
+                        'rgba(25, 135, 84, 1)',
+                        'rgba(255, 193, 7, 1)'
+                    ],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { 
+                            precision: 0,
+                            font: {
+                                size: 12
+                            }
+                        },
+                        grid: {
+                            display: true,
+                            drawBorder: false
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            font: {
+                                size: 12
+                            }
+                        },
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: { 
+                        display: false 
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        titleFont: {
+                            size: 14
+                        },
+                        bodyFont: {
+                            size: 13
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Status Chart
+    const statusCtx = document.getElementById('statusChart');
+    if (statusCtx) {
+        // Use actual status data from server
+        const admitted = {{ admitted_count | default(0) }};
+        const rejected = {{ rejected_count | default(0) }};
+        const pending = {{ pending_count | default(0) }};
+
+        new Chart(statusCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Admitted', 'Rejected', 'Pending'],
+                datasets: [{
+                    data: [admitted, rejected, pending],
+                    backgroundColor: [
+                        'rgba(25, 135, 84, 0.8)',
+                        'rgba(220, 53, 69, 0.8)',
+                        'rgba(255, 193, 7, 0.8)'
+                    ],
+                    borderColor: [
+                        'rgba(25, 135, 84, 1)',
+                        'rgba(220, 53, 69, 1)',
+                        'rgba(255, 193, 7, 1)'
+                    ],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 15,
+                            font: {
+                                size: 12
+                            }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        padding: 12,
+                        titleFont: {
+                            size: 14
+                        },
+                        bodyFont: {
+                            size: 13
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+</script>
+{% endblock %}

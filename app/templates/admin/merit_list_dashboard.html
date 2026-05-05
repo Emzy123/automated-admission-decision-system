@@ -1,0 +1,380 @@
+{% extends "base.html" %}
+{% block title %}Merit List Dashboard{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Merit List</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-1">Merit List &amp; Admissions</h1>
+        <p class="text-muted mb-0">Session: {{ session.name }} — Rank candidates and generate admission decisions</p>
+    </div>
+    <div class="d-flex gap-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="refreshDashboard()">
+            <i class="fa-solid fa-sync-alt me-1"></i>Refresh
+        </button>
+        <button type="button" class="btn btn-outline-primary btn-sm" onclick="exportAllLists()">
+            <i class="fa-solid fa-download me-1"></i>Export All
+        </button>
+        <button type="button" class="btn btn-success" id="generateAllBtn" onclick="generateAllAdmissions()">
+            <i class="fa-solid fa-bolt me-1"></i>Generate Admissions — All Programmes
+        </button>
+    </div>
+</div>
+
+<!-- Info Banner -->
+<div class="alert alert-info alert-dismissible fade show mb-3" role="alert">
+    <i class="fa-solid fa-circle-info me-2"></i>
+    <strong>How it works:</strong> Click <strong>"Generate Admissions — All Programmes"</strong> to automatically admit the top-ranked candidates in each programme based on Merit, Catchment & ELDS quota slots. You can also generate per-programme using each card's button.
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+
+<!-- Overall Statistics -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="h1 mb-1 text-primary" id="totalProgrammes">{{ programmes|length }}</div>
+                <div class="text-muted">Total Programmes</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="h1 mb-1 text-success" id="totalSlots">{{ programmes|sum(attribute='stats.total_slots') if programmes|selectattr('stats')|list else 0 }}</div>
+                <div class="text-muted">Total Slots</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="h1 mb-1 text-info" id="totalFilled">{{ programmes|sum(attribute='stats.filled') if programmes|selectattr('stats')|list else 0 }}</div>
+                <div class="text-muted">Slots Filled</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="h1 mb-1 text-warning" id="totalAvailable">{{ programmes|sum(attribute='stats.available') if programmes|selectattr('stats')|list else 0 }}</div>
+                <div class="text-muted">Slots Available</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Programme Cards -->
+<div class="row g-3">
+    {% for programme_data in programmes %}
+        {% set programme = programme_data.programme %}
+        {% set stats = programme_data.stats %}
+        {% set error = programme_data.error %}
+        
+        <div class="col-lg-6 col-xl-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="mb-1">{{ programme.name }}</h6>
+                            <small class="text-muted">{{ programme.code }} - {{ programme.university.short_code }}</small>
+                        </div>
+                        <span class="badge bg-primary">{{ programme.faculty.name }}</span>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if error %}
+                        <div class="alert alert-warning py-2">
+                            <small class="mb-0">{{ error }}</small>
+                        </div>
+                    {% elif stats %}
+                        <!-- Overall Progress -->
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <small class="text-muted">Overall Progress</small>
+                                <small class="text-muted">{{ stats.filled }}/{{ stats.total_slots }}</small>
+                            </div>
+                            <div class="progress" style="height: 8px;">
+                                <div class="progress-bar" style="width: {{ (stats.filled / stats.total_slots * 100) if stats.total_slots > 0 else 0 }}%"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Quota Breakdown -->
+                        <div class="row g-2 text-center">
+                            <div class="col-4">
+                                <div class="p-2 bg-light rounded">
+                                    <div class="small text-muted mb-1">Merit</div>
+                                    <div class="h6 mb-0">{{ stats.merit.filled }}/{{ stats.merit.slots }}</div>
+                                    <div class="progress" style="height: 4px;">
+                                        <div class="progress-bar bg-success" style="width: {{ (stats.merit.filled / stats.merit.slots * 100) if stats.merit.slots > 0 else 0 }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 bg-light rounded">
+                                    <div class="small text-muted mb-1">Catchment</div>
+                                    <div class="h6 mb-0">{{ stats.catchment.filled }}/{{ stats.catchment.slots }}</div>
+                                    <div class="progress" style="height: 4px;">
+                                        <div class="progress-bar bg-info" style="width: {{ (stats.catchment.filled / stats.catchment.slots * 100) if stats.catchment.slots > 0 else 0 }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-4">
+                                <div class="p-2 bg-light rounded">
+                                    <div class="small text-muted mb-1">ELDS</div>
+                                    <div class="h6 mb-0">{{ stats.elds.filled }}/{{ stats.elds.slots }}</div>
+                                    <div class="progress" style="height: 4px;">
+                                        <div class="progress-bar bg-warning" style="width: {{ (stats.elds.filled / stats.elds.slots * 100) if stats.elds.slots > 0 else 0 }}%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Recommended Candidates -->
+                        {% if stats.total_recommended > 0 %}
+                        <div class="mt-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">Recommended Candidates</small>
+                                <span class="badge bg-secondary">{{ stats.total_recommended }}</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-center py-3">
+                            <i class="fa-solid fa-chart-line fa-2x text-muted mb-2"></i>
+                            <p class="text-muted mb-0">No admission data available</p>
+                        </div>
+                    {% endif %}
+                </div>
+                <div class="card-footer bg-white">
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-success btn-sm flex-fill generate-btn"
+                                data-programme-id="{{ programme.id }}"
+                                data-programme-name="{{ programme.name }}"
+                                onclick="generateForProgramme({{ programme.id }}, '{{ programme.name }}', this)">
+                            <i class="fa-solid fa-bolt me-1"></i>Generate Admissions
+                        </button>
+                        <a href="{{ url_for('admission.merit_list_detail', programme_id=programme.id) }}"
+                           class="btn btn-primary btn-sm flex-fill">
+                            <i class="fa-solid fa-list me-1"></i>View Details
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+    
+    {% if not programmes %}
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="fa-solid fa-graduation-cap fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No Programmes Found</h5>
+                    <p class="text-muted mb-0">No programmes are available for the current session.</p>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+<!-- Export Modal -->
+<div class="modal fade" id="exportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Export All Merit Lists</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Export merit lists for all programmes in {{ session.name }}.</p>
+                
+                <div class="mb-3">
+                    <label class="form-label">Export Format</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="exportFormat" id="excelFormat" value="excel" checked>
+                        <label class="form-check-label" for="excelFormat">
+                            Excel (.xlsx) - Recommended
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="exportFormat" id="csvFormat" value="csv">
+                        <label class="form-check-label" for="csvFormat">
+                            CSV (.csv)
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Include Quotas</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="includeMerit" checked>
+                        <label class="form-check-label" for="includeMerit">Merit List</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="includeCatchment" checked>
+                        <label class="form-check-label" for="includeCatchment">Catchment List</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="includeElds" checked>
+                        <label class="form-check-label" for="includeElds">ELDS List</label>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="performExport()">
+                    <i class="fa-solid fa-download me-1"></i>Export
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+function refreshDashboard() {
+    location.reload();
+}
+
+async function generateForProgramme(programmeId, programmeName, btn) {
+    if (!confirm(`Generate admissions for ${programmeName}?\n\nThis will rank all recommended candidates and admit the top ones based on quota slots.`)) return;
+    
+    const original = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Generating...';
+
+    try {
+        const res = await fetch(`/api/admission/generate/${programmeId}`, {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToastResult('success', data.message, data.stats);
+            setTimeout(() => location.reload(), 2500);
+        } else {
+            showToastResult('danger', 'Error: ' + data.message, null);
+            btn.disabled = false;
+            btn.innerHTML = original;
+        }
+    } catch (e) {
+        showToastResult('danger', 'Network error: ' + e.message, null);
+        btn.disabled = false;
+        btn.innerHTML = original;
+    }
+}
+
+async function generateAllAdmissions() {
+    const btn = document.getElementById('generateAllBtn');
+    if (!confirm('Generate admissions for ALL programmes?\n\nThis will rank all recommended candidates across every programme and admit the top ones per quota slot. This action may take a moment.')) return;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Processing...';
+
+    try {
+        const res = await fetch('/api/admission/generate-all', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrfToken, 'Content-Type': 'application/json' }
+        });
+        const data = await res.json();
+        if (data.success) {
+            showToastResult('success', data.message, null);
+            setTimeout(() => location.reload(), 3000);
+        } else {
+            showToastResult('danger', 'Error: ' + data.message, null);
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fa-solid fa-bolt me-1"></i>Generate Admissions — All Programmes';
+        }
+    } catch (e) {
+        showToastResult('danger', 'Network error: ' + e.message, null);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-bolt me-1"></i>Generate Admissions — All Programmes';
+    }
+}
+
+function showToastResult(type, message, stats) {
+    const container = document.querySelector('.toast-container') || document.body;
+    const toast = document.createElement('div');
+    let extra = '';
+    if (stats) {
+        extra = `<div class="small mt-1">Merit: ${stats.merit_admitted} · Catchment: ${stats.catchment_admitted} · ELDS: ${stats.elds_admitted} · Total: ${stats.filled}/${stats.total_slots} slots filled</div>`;
+    }
+    toast.className = `alert alert-${type} alert-dismissible fade show shadow`;
+    toast.style.cssText = 'position:fixed;top:80px;right:20px;z-index:9999;min-width:340px;max-width:480px;';
+    toast.innerHTML = `<i class="fa-solid fa-${type === 'success' ? 'check-circle' : 'exclamation-triangle'} me-2"></i>${message}${extra}<button type="button" class="btn-close" data-bs-dismiss="alert"></button>`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 6000);
+}
+
+function exportAllLists() {
+    const modal = new bootstrap.Modal(document.getElementById('exportModal'));
+    modal.show();
+}
+
+function performExport() {
+    const format = document.querySelector('input[name="exportFormat"]:checked').value;
+    const includeMerit = document.getElementById('includeMerit').checked;
+    const includeCatchment = document.getElementById('includeCatchment').checked;
+    const includeElds = document.getElementById('includeElds').checked;
+
+    if (!includeMerit && !includeCatchment && !includeElds) {
+        alert('Please select at least one quota to include.');
+        return;
+    }
+
+    bootstrap.Modal.getInstance(document.getElementById('exportModal')).hide();
+
+    const programmeIds = {{ programmes|map(attribute='programme.id')|list }};
+    let exportPromises = [];
+
+    programmeIds.forEach(programmeId => {
+        const quotas = [];
+        if (includeMerit) quotas.push('merit');
+        if (includeCatchment) quotas.push('catchment');
+        if (includeElds) quotas.push('elds');
+
+        quotas.forEach(quota => {
+            exportPromises.push(
+                fetch(`/admission/merit-list/${programmeId}/export?quota=${quota}`)
+                    .then(r => r.blob())
+                    .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = `programme_${programmeId}_${quota}_merit_list.${format}`;
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                        document.body.removeChild(a);
+                    })
+            );
+        });
+    });
+
+    Promise.all(exportPromises).then(() => {
+        showToastResult('success', 'Export completed successfully!', null);
+    }).catch(err => {
+        showToastResult('danger', 'Export failed: ' + err.message, null);
+    });
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'r') { e.preventDefault(); refreshDashboard(); }
+    if (e.ctrlKey && e.key === 'e') { e.preventDefault(); exportAllLists(); }
+});
+
+// Auto-refresh every 5 minutes
+setInterval(refreshDashboard, 300000);
+</script>
+{% endblock %}
+

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}University Configuration{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active" aria-current="page">University Configuration</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-1">University Settings</h1>
+        <p class="text-muted mb-0">Configure institution-wide admission formula, quotas, and baseline criteria.</p>
+    </div>
+    <a href="{{ url_for('admin.university_catchment') }}" class="btn btn-outline-secondary">
+        <i class="fa-solid fa-map-location-dot me-1"></i>Manage Catchment States
+    </a>
+</div>
+
+<form method="post" class="card border-0 shadow-sm">
+    <div class="card-body">
+        {{ form.hidden_tag() }}
+
+        <div class="row g-3">
+            <div class="col-md-8">
+                <label class="form-label">{{ form.name.label.text }}</label>
+                {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+                {% for error in form.name.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">{{ form.short_code.label.text }}</label>
+                {{ form.short_code(class="form-control" + (" is-invalid" if form.short_code.errors else "")) }}
+                {% for error in form.short_code.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">{{ form.formula_type.label.text }}</label>
+                {{ form.formula_type(class="form-select" + (" is-invalid" if form.formula_type.errors else "")) }}
+                {% for error in form.formula_type.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">{{ form.jamb_divisor.label.text }}</label>
+                {{ form.jamb_divisor(class="form-control" + (" is-invalid" if form.jamb_divisor.errors else "")) }}
+                {% for error in form.jamb_divisor.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">{{ form.post_utme_divisor.label.text }}</label>
+                {{ form.post_utme_divisor(class="form-control" + (" is-invalid" if form.post_utme_divisor.errors else "")) }}
+                {% for error in form.post_utme_divisor.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+        </div>
+
+        <hr class="my-4">
+        <h5 class="mb-3">Quota Distribution</h5>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">{{ form.merit_quota_percent.label.text }}</label>
+                {{ form.merit_quota_percent(class="form-control" + (" is-invalid" if form.merit_quota_percent.errors else "")) }}
+                {% for error in form.merit_quota_percent.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">{{ form.catchment_quota_percent.label.text }}</label>
+                {{ form.catchment_quota_percent(class="form-control" + (" is-invalid" if form.catchment_quota_percent.errors else "")) }}
+                {% for error in form.catchment_quota_percent.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">{{ form.elds_quota_percent.label.text }}</label>
+                {{ form.elds_quota_percent(class="form-control" + (" is-invalid" if form.elds_quota_percent.errors else "")) }}
+                {% for error in form.elds_quota_percent.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+        </div>
+
+        <hr class="my-4">
+        <h5 class="mb-3">Baseline Eligibility</h5>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">{{ form.min_olevel_credits.label.text }}</label>
+                {{ form.min_olevel_credits(class="form-control" + (" is-invalid" if form.min_olevel_credits.errors else "")) }}
+                {% for error in form.min_olevel_credits.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">{{ form.max_olevel_sittings.label.text }}</label>
+                {{ form.max_olevel_sittings(class="form-control" + (" is-invalid" if form.max_olevel_sittings.errors else "")) }}
+                {% for error in form.max_olevel_sittings.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">{{ form.min_utme_score.label.text }}</label>
+                {{ form.min_utme_score(class="form-control" + (" is-invalid" if form.min_utme_score.errors else "")) }}
+                {% for error in form.min_utme_score.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+        </div>
+
+        <hr class="my-4">
+        <h5 class="mb-2">Grade Point Mapping</h5>
+        <p class="small text-muted">Example: A1=8, B2=7, B3=6, C4=5, C5=4, C6=3</p>
+        <div class="mb-3">
+            {{ form.grade_points_json(class="form-control font-monospace" + (" is-invalid" if form.grade_points_json.errors else ""), rows="7") }}
+            {% for error in form.grade_points_json.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+        </div>
+    </div>
+    <div class="card-footer bg-white d-flex justify-content-end">
+        {{ form.submit(class="btn btn-primary", onclick="return confirm('Save university configuration changes?')") }}
+    </div>
+</form>
+{% endblock %}

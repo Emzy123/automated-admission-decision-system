@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block title %}Programmes{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Programmes</li>
+    </ol>
+</nav>
+
+<div class="card mb-4">
+    <div class="card-body d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h3 mb-1">Programme Configuration</h1>
+            <p class="text-muted mb-0">Manage academic programmes and admission criteria.</p>
+        </div>
+        <a href="{{ url_for('admin.add_programme') }}" class="btn btn-primary">
+            <i class="fa-solid fa-plus me-2"></i>Add Programme
+        </a>
+    </div>
+</div>
+
+<form method="get" class="card mb-4">
+    <div class="card-body row g-2 align-items-end">
+        <div class="col-md-4">
+            <label for="faculty_id" class="form-label">Filter by Faculty</label>
+            <select id="faculty_id" name="faculty_id" class="form-select">
+                <option value="">All Faculties</option>
+                {% for faculty in faculties %}
+                    <option value="{{ faculty.id }}" {% if selected_faculty_id == faculty.id %}selected{% endif %}>
+                        {{ faculty.name }} ({{ faculty.code }})
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-outline-primary w-100" type="submit">Apply</button>
+        </div>
+    </div>
+</form>
+
+<div class="card">
+    <div class="card-body p-0">
+        {% if programmes %}
+        <div class="table-responsive">
+            <table class="table-modern">
+                <thead>
+                    <tr>
+                        <th class="text-nowrap">NAME</th>
+                        <th class="text-nowrap">FACULTY</th>
+                        <th class="text-nowrap">SLOTS (T/M/C/E)</th>
+                        <th class="text-nowrap">CUTOFFS (M/C/E)</th>
+                        <th class="text-end text-nowrap">ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for programme in programmes %}
+                            <tr>
+                                <td>
+                                    <div class="fw-semibold">{{ programme.name }}</div>
+                                    <div class="small text-muted">{{ programme.code }}</div>
+                                </td>
+                                <td>{{ programme.faculty.name if programme.faculty else "N/A" }}</td>
+                                <td class="text-nowrap">{{ programme.total_slots }} / {{ programme.merit_slots }} / {{ programme.catchment_slots }} / {{ programme.elds_slots }}</td>
+                                <td class="text-nowrap">
+                                    {{ programme.merit_cutoff if programme.merit_cutoff is not none else "-" }} /
+                                    {{ programme.catchment_cutoff if programme.catchment_cutoff is not none else "-" }} /
+                                    {{ programme.elds_cutoff if programme.elds_cutoff is not none else "-" }}
+                                </td>
+                                <td class="text-end text-nowrap">
+                                    <a href="{{ url_for('admin.programme_rules', id=programme.id) }}" class="btn btn-sm btn-outline-secondary">
+                                        Rules
+                                    </a>
+                                    <a href="{{ url_for('admin.edit_programme', programme_id=programme.id) }}" class="btn btn-sm btn-outline-primary">
+                                        Edit
+                                    </a>
+                                    <form action="{{ url_for('admin.delete_programme', programme_id=programme.id) }}" method="post" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Delete this programme?')">
+                                            Delete
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <i class="fa-solid fa-layer-group"></i>
+            </div>
+            <h3>No Programmes Yet</h3>
+            <p>Get started by adding your first academic programme to begin processing admissions.</p>
+            <a href="{{ url_for('admin.add_programme') }}" class="btn btn-primary mt-2">
+                <i class="fa-solid fa-plus me-2"></i>Add Programme
+            </a>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

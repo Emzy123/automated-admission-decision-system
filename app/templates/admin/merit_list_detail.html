@@ -1,0 +1,359 @@
+{% extends "base.html" %}
+{% block title %}{{ programme.name }} - Merit List{% endblock %}
+{% block styles %}
+<style>
+.merit-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+.cutoff-line {
+    border-top: 2px solid #dc3545;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+.cutoff-label {
+    background-color: #dc3545;
+    color: white;
+    padding: 2px 8px;
+    font-size: 0.75rem;
+    border-radius: 4px;
+    position: absolute;
+    right: 0;
+    top: -12px;
+}
+.status-admitted { color: #198754; font-weight: 600; }
+.status-accepted { color: #0d6efd; font-weight: 600; }
+.status-waiting { color: #fd7e14; font-weight: 600; }
+.status-declined { color: #dc3545; font-weight: 600; text-decoration: line-through; }
+.status-rejected { color: #dc3545; font-weight: 600; }
+.quota-merit { background-color: #d4edda; }
+.quota-catchment { background-color: #d1ecf1; }
+.quota-elds { background-color: #fff3cd; }
+.row-declined { opacity: 0.55; background-color: #fff5f5; }
+</style>
+{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('admission.merit_list_dashboard') }}">Merit List</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ programme.name }}</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-1">{{ programme.name }} Merit List</h1>
+        <p class="text-muted mb-0">{{ programme.code }} - {{ session.name }}</p>
+    </div>
+    <div class="d-flex gap-2">
+        <div class="btn-group" role="group">
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="exportMeritList('merit')">
+                <i class="fa-solid fa-download me-1"></i>Export Merit
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="exportMeritList('catchment')">
+                <i class="fa-solid fa-download me-1"></i>Export Catchment
+            </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="exportMeritList('elds')">
+                <i class="fa-solid fa-download me-1"></i>Export ELDS
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm" onclick="exportMeritList()">
+                <i class="fa-solid fa-download me-1"></i>Export All
+            </button>
+        </div>
+        {% if current_user.role in ['admin', 'admission_officer'] %}
+            <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#finalizeModal">
+                <i class="fa-solid fa-lock me-1"></i>Finalize List
+            </button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="h4 mb-1 text-primary">{{ statistics.total_slots }}</div>
+                <div class="text-muted">Total Slots</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="h4 mb-1 text-success">{{ statistics.filled }}</div>
+                <div class="text-muted">Slots Filled</div>
+                <div class="progress mt-2" style="height: 6px;">
+                    <div class="progress-bar bg-success" {{ 'style="width: ' ~ ((statistics.filled / statistics.total_slots * 100) if statistics.total_slots > 0 else 0) ~ '%"' | safe }}></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="h4 mb-1 text-warning">{{ statistics.available }}</div>
+                <div class="text-muted">Slots Available</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="h4 mb-1 text-info">{{ statistics.total_recommended }}</div>
+                <div class="text-muted">Recommended</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Approval Status -->
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Approval Status</h5>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <div class="d-flex align-items-center">
+                    <i class="fa-solid fa-{{ 'check-circle text-success' if approval_status.department_approved else 'times-circle text-muted' }} me-2"></i>
+                    <div>
+                        <div class="fw-semibold">Department</div>
+                        <small class="text-muted">
+                            {% if approval_status.department_approved %}
+                                Approved by {{ approval_status.department_approved_by }}
+                            {% else %}
+                                Pending
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="d-flex align-items-center">
+                    <i class="fa-solid fa-{{ 'check-circle text-success' if approval_status.faculty_approved else 'times-circle text-muted' }} me-2"></i>
+                    <div>
+                        <div class="fw-semibold">Faculty</div>
+                        <small class="text-muted">
+                            {% if approval_status.faculty_approved %}
+                                Approved by {{ approval_status.faculty_approved_by }}
+                            {% else %}
+                                Pending
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="d-flex align-items-center">
+                    <i class="fa-solid fa-{{ 'check-circle text-success' if approval_status.senate_approved else 'times-circle text-muted' }} me-2"></i>
+                    <div>
+                        <div class="fw-semibold">Senate</div>
+                        <small class="text-muted">
+                            {% if approval_status.senate_approved %}
+                                Approved by {{ approval_status.senate_approved_by }}
+                            {% else %}
+                                Pending
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="d-flex align-items-center">
+                    <i class="fa-solid fa-{{ 'lock text-warning' if approval_status.finalized else 'unlock text-muted' }} me-2"></i>
+                    <div>
+                        <div class="fw-semibold">Status</div>
+                        <small class="text-muted">
+                            {% if approval_status.finalized %}
+                                Finalized
+                            {% else %}
+                                Draft
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        {% if current_user.role in ['admin', 'admission_officer', 'faculty_officer'] and not approval_status.finalized %}
+            <div class="mt-3 pt-3 border-top">
+                <div class="d-flex gap-2">
+                    {% if current_user.role in ['admin', 'admission_officer'] and not approval_status.department_approved %}
+                        <form method="post" action="{{ url_for('admission.approve_merit_list', programme_id=programme.id, level='department') }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-success btn-sm">
+                                <i class="fa-solid fa-check me-1"></i>Approve Department
+                            </button>
+                        </form>
+                    {% endif %}
+                    
+                    {% if current_user.role in ['admin', 'admission_officer', 'faculty_officer'] and approval_status.department_approved and not approval_status.faculty_approved %}
+                        <form method="post" action="{{ url_for('admission.approve_merit_list', programme_id=programme.id, level='faculty') }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-success btn-sm">
+                                <i class="fa-solid fa-check me-1"></i>Approve Faculty
+                            </button>
+                        </form>
+                    {% endif %}
+                    
+                    {% if current_user.role == 'admin' and approval_status.faculty_approved and not approval_status.senate_approved %}
+                        <form method="post" action="{{ url_for('admission.approve_merit_list', programme_id=programme.id, level='senate') }}" class="d-inline">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-success btn-sm">
+                                <i class="fa-solid fa-check me-1"></i>Approve Senate
+                            </button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Quota Tabs -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white">
+        <ul class="nav nav-tabs card-header-tabs" id="quotaTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="merit-tab" data-bs-toggle="tab" data-bs-target="#merit" type="button" role="tab">
+                    Merit ({{ merit_data.merit.admitted|length }}/{{ merit_data.merit.slot_limit }})
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="catchment-tab" data-bs-toggle="tab" data-bs-target="#catchment" type="button" role="tab">
+                    Catchment ({{ merit_data.catchment.admitted|length }}/{{ merit_data.catchment.slot_limit }})
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="elds-tab" data-bs-toggle="tab" data-bs-target="#elds" type="button" role="tab">
+                    ELDS ({{ merit_data.elds.admitted|length }}/{{ merit_data.elds.slot_limit }})
+                </button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body p-0">
+        <div class="tab-content" id="quotaTabContent">
+            <!-- Merit Tab -->
+            <div class="tab-pane fade show active" id="merit" role="tabpanel">
+                {% include 'admin/merit_list_table.html' with context %}
+            </div>
+            
+            <!-- Catchment Tab -->
+            <div class="tab-pane fade" id="catchment" role="tabpanel">
+                {% set current_quota = 'catchment' %}
+                {% set quota_data = merit_data.catchment %}
+                {% include 'admin/merit_list_table.html' with context %}
+            </div>
+            
+            <!-- ELDS Tab -->
+            <div class="tab-pane fade" id="elds" role="tabpanel">
+                {% set current_quota = 'elds' %}
+                {% set quota_data = merit_data.elds %}
+                {% include 'admin/merit_list_table.html' with context %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Finalize Modal -->
+<div class="modal fade" id="finalizeModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Finalize Merit List</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{{ url_for('admission.finalize_merit_list', programme_id=programme.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fa-solid fa-exclamation-triangle me-2"></i>
+                        <strong>Warning:</strong> Finalizing the merit list will:
+                    </div>
+                    <ul>
+                        <li>Lock all admission decisions</li>
+                        <li>Prevent further changes to the list</li>
+                        <li>Update recommended candidates to waiting list status</li>
+                        <li>Generate final admission records</li>
+                    </ul>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="confirmFinalize" name="confirm" required>
+                            <label class="form-check-label" for="confirmFinalize">
+                                I understand this action cannot be undone
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fa-solid fa-lock me-1"></i>Finalize List
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+function exportMeritList(quota) {
+    const url = `/admission/merit-list/{{ programme.id }}/export${quota ? '?quota=' + quota : ''}`;
+    window.open(url, '_blank');
+}
+
+// Search functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInputs = document.querySelectorAll('input[placeholder*="Search"]');
+    searchInputs.forEach(input => {
+        input.addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            const table = e.target.closest('.tab-pane').querySelector('table');
+            const rows = table.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                const text = row.textContent.toLowerCase();
+                row.style.display = text.includes(searchTerm) ? '' : 'none';
+            });
+        });
+    });
+});
+
+// Tab switching with data persistence
+document.getElementById('quotaTabs').addEventListener('shown.bs.tab', function(e) {
+    const activeTab = e.target.id;
+    localStorage.setItem('activeMeritTab', activeTab);
+});
+
+// Restore active tab on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const activeTab = localStorage.getItem('activeMeritTab');
+    if (activeTab) {
+        const tabButton = document.getElementById(activeTab);
+        if (tabButton) {
+            const tab = new bootstrap.Tab(tabButton);
+            tab.show();
+        }
+    }
+});
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.ctrlKey && e.key === 'e') {
+        e.preventDefault();
+        exportMeritList();
+    }
+    if (e.ctrlKey && e.key === 'f') {
+        e.preventDefault();
+        document.querySelector('input[placeholder*="Search"]')?.focus();
+    }
+});
+</script>
+{% endblock %}

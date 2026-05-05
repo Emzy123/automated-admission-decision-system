@@ -1,0 +1,443 @@
+{% extends "base.html" %}
+{% block title %}Batch Screening{% endblock %}
+{% block content %}
+<style>
+    /* Maximum contrast overrides - use inline styles as fallback */
+    body .batch-screening-page {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+    }
+    
+    /* Force all text to be black with maximum specificity */
+    body .batch-screening-page *,
+    body .batch-screening-page * *,
+    body .batch-screening-page * * *,
+    body .batch-screening-page div,
+    body .batch-screening-page span,
+    body .batch-screening-page p,
+    body .batch-screening-page h1,
+    body .batch-screening-page h2,
+    body .batch-screening-page h3,
+    body .batch-screening-page h4,
+    body .batch-screening-page h5,
+    body .batch-screening-page h6,
+    body .batch-screening-page td,
+    body .batch-screening-page th,
+    body .batch-screening-page label,
+    body .batch-screening-page input,
+    body .batch-screening-page select,
+    body .batch-screening-page textarea,
+    body .batch-screening-page code {
+        color: #000000 !important;
+    }
+    
+    /* Table headers with high contrast */
+    body .batch-screening-page .table th {
+        background-color: #f0f0f0 !important;
+        color: #000000 !important;
+        font-weight: 900 !important;
+        border: 2px solid #333333 !important;
+    }
+    
+    /* Table cells with high contrast */
+    body .batch-screening-page .table td {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border: 1px solid #666666 !important;
+        font-weight: 700 !important;
+    }
+    
+    /* Programme column specifically (now column 7) */
+    body .batch-screening-page .table td:nth-child(7) {
+        color: #000000 !important;
+        font-weight: 900 !important;
+        background-color: #ffffcc !important;
+    }
+    
+    /* Session column specifically (now column 8) */
+    body .batch-screening-page .table td:nth-child(8) {
+        color: #000000 !important;
+        font-weight: 900 !important;
+        background-color: #ccffcc !important;
+    }
+    
+    /* Status badges with maximum contrast */
+    body .batch-screening-page .badge {
+        font-weight: 900 !important;
+        border: 2px solid #000000 !important;
+    }
+    
+    body .batch-screening-page .badge.bg-secondary {
+        background-color: #666666 !important;
+        color: #ffffff !important;
+    }
+    
+    body .batch-screening-page .badge.bg-info {
+        background-color: #0066cc !important;
+        color: #ffffff !important;
+    }
+    
+    body .batch-screening-page .badge.bg-success {
+        background-color: #006600 !important;
+        color: #ffffff !important;
+    }
+    
+    body .batch-screening-page .badge.bg-danger {
+        background-color: #cc0000 !important;
+        color: #ffffff !important;
+    }
+    
+    /* Form elements with high contrast */
+    body .batch-screening-page .form-control,
+    body .batch-screening-page .form-select {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border: 2px solid #000000 !important;
+        font-weight: 700 !important;
+    }
+    
+    /* Links with high contrast */
+    body .batch-screening-page a {
+        color: #0000cc !important;
+        font-weight: 900 !important;
+        text-decoration: underline !important;
+    }
+    
+    /* Code blocks */
+    body .batch-screening-page code {
+        background-color: #f0f0f0 !important;
+        color: #000000 !important;
+        border: 1px solid #000000 !important;
+        padding: 4px !important;
+        font-weight: 700 !important;
+    }
+    
+    /* Headers */
+    body .batch-screening-page h1,
+    body .batch-screening-page h2,
+    body .batch-screening-page h3,
+    body .batch-screening-page h4,
+    body .batch-screening-page h5 {
+        color: #000000 !important;
+        font-weight: 900 !important;
+        background-color: #ffffff !important;
+    }
+    
+    /* Card headers */
+    body .batch-screening-page .card-header {
+        background-color: #f0f0f0 !important;
+        color: #000000 !important;
+        border: 2px solid #000000 !important;
+    }
+    
+    /* Card bodies */
+    body .batch-screening-page .card-body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border: 1px solid #666666 !important;
+    }
+    
+    /* Buttons */
+    body .batch-screening-page .btn {
+        font-weight: 900 !important;
+        border: 2px solid #000000 !important;
+    }
+    
+    body .batch-screening-page .btn-primary {
+        background-color: #0066cc !important;
+        color: #ffffff !important;
+    }
+    
+    body .batch-screening-page .btn-outline-secondary {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+    }
+</style>
+
+<div class="batch-screening-page">
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}" style="color: var(--primary, #005a9c);">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.candidates') }}" style="color: var(--primary, #005a9c);">Candidates</a></li>
+        <li class="breadcrumb-item active" aria-current="page" style="color: var(--text-secondary, #6c757d);">Batch Screening</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3" style="background-color: #ffffff; color: #000000;">
+    <div style="background-color: #ffffff; color: #000000;">
+        <h1 class="h3 mb-1" style="color: #000000 !important; font-weight: 900 !important; background-color: #ffffff !important;">Batch Screening</h1>
+        <p class="text-muted mb-0" style="color: #000000 !important; font-weight: 700 !important; background-color: #ffffff !important;">Select candidates and programme for batch screening</p>
+    </div>
+</div>
+
+<form method="post" action="{{ url_for('admin.batch_screen') }}" id="batchScreenForm">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    
+    <!-- Programme and Session Selection -->
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">Screening Configuration</h5>
+        </div>
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label for="programme_id" class="form-label">Programme</label>
+                    <select class="form-select" id="programme_id" name="programme_id" required>
+                        <option value="">Select Programme</option>
+                        {% for programme in programmes %}
+                        <option value="{{ programme.id }}" data-university="{{ programme.university.name }}">
+                            {{ programme.name }} ({{ programme.code }})
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label for="session_id" class="form-label">Academic Session</label>
+                    <select class="form-select" id="session_id" name="session_id" required>
+                        <option value="">Select Session</option>
+                        {% for session in sessions %}
+                        <option value="{{ session.id }}" {% if session.is_active %}selected{% endif %}>
+                            {{ session.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Candidate Selection -->
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">Candidate Selection</h5>
+        </div>
+        <div class="card-body">
+            <!-- Search and Filters -->
+            <div class="row g-2 mb-3">
+                <div class="col-md-6">
+                    <input type="text" class="form-control" id="candidateSearch" placeholder="Search by name or JAMB reg...">
+                </div>
+                <div class="col-md-3">
+                    <select class="form-select form-control-sm" id="statusFilter">
+                        <option value="">All Statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="screened">Screened</option>
+                        <option value="recommended">Recommended</option>
+                        <option value="rejected">Rejected</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <div class="btn-group w-100" role="group">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="selectAll()">Select All</button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="clearSelection()">Clear All</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Candidate Table -->
+            <div class="table-responsive">
+                <table class="table table-hover align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="40">
+                                <input type="checkbox" id="selectAllCheckbox" onchange="toggleSelectAll()">
+                            </th>
+                            <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;">JAMB Reg</th>
+                            <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;">Full Name</th>
+                            <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;">State</th>
+                            <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;">UTME</th>
+                            <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;">Post-UTME</th>
+                            <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;">Programme</th>
+                            <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;">Session</th>
+                        </tr>
+                    </thead>
+                    <tbody id="candidateTableBody">
+                        {% for candidate in candidates %}
+                        <tr data-status="{{ candidate.status }}" data-name="{{ candidate.full_name|lower }}" data-jamb="{{ candidate.jamb_reg_number|lower }}">
+                            <td>
+                                <input type="checkbox" name="candidate_ids" value="{{ candidate.id }}" class="candidate-checkbox">
+                            </td>
+                            <td style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;"><code style="color: #000000 !important; background-color: #f0f0f0 !important; border: 1px solid #000000 !important; padding: 4px !important; font-weight: 700 !important;">{{ candidate.jamb_reg_number }}</code></td>
+                            <td style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">{{ candidate.full_name }}</td>
+                            <td style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">{{ candidate.state_of_origin or 'N/A' }}</td>
+                            <td style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">{{ candidate.utme_score or 'N/A' }}</td>
+                            <td style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">
+                                {% if candidate.post_utme_present and candidate.post_utme_score %}
+                                    {{ "%.1f"|format(candidate.post_utme_score) }}
+                                {% else %}
+                                    <span style="color: #999999 !important; font-weight: 700 !important;">Not taken</span>
+                                {% endif %}
+                            </td>
+                            <td style="color: #000000 !important; background-color: #ffffcc !important; font-weight: 900 !important;">
+                                {% if candidate.first_choice_programme %}
+                                    {{ candidate.first_choice_programme.name }} ({{ candidate.first_choice_programme.code }})
+                                {% else %}
+                                    <span style="color: #000000 !important; font-weight: 700 !important;">Not assigned</span>
+                                {% endif %}
+                            </td>
+                            <td style="color: #000000 !important; background-color: #ccffcc !important; font-weight: 900 !important;">
+                                {% if candidate.session %}
+                                    {{ candidate.session.name }}
+                                {% else %}
+                                    <span style="color: #000000 !important; font-weight: 700 !important;">Not assigned</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="mt-3">
+                <small class="text-muted">
+                    <i class="fa-solid fa-info-circle me-1"></i>
+                    Selected candidates will be screened against the selected programme's admission criteria.
+                </small>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('admin.candidates') }}" class="btn btn-outline-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary" id="submitBtn">
+                        <i class="fa-solid fa-play me-1"></i>Start Screening
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Modal -->
+    <div class="modal fade" id="confirmModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Batch Screening</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>You are about to screen <strong id="modalCandidateCount">0</strong> candidates for:</p>
+                    <ul>
+                        <li><strong>Programme:</strong> <span id="modalProgramme"></span></li>
+                        <li><strong>University:</strong> <span id="modalUniversity"></span></li>
+                        <li><strong>Session:</strong> <span id="modalSession"></span></li>
+                    </ul>
+                    <p class="text-warning">This action will create admission records and cannot be undone. Continue?</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="confirmScreening()">
+                        <i class="fa-solid fa-play me-1"></i>Start Screening
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Modal -->
+    <div class="modal fade" id="progressModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Screening in Progress</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="progress mb-3">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             id="progressBar" style="width: 0%"></div>
+                    </div>
+                    <p class="text-center mb-0" id="progressText">Starting screening...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+</div> <!-- End of batch-screening-page -->
+
+{% block scripts %}
+{{ super() }}
+<script>
+// Simple form validation and submission
+document.getElementById('batchScreenForm').addEventListener('submit', function(e) {
+    const checkboxes = document.querySelectorAll('.candidate-checkbox:checked');
+    if (checkboxes.length === 0) {
+        e.preventDefault();
+        alert('Please select at least one candidate for screening.');
+        return false;
+    }
+    
+    const programmeSelect = document.getElementById('programme_id');
+    const sessionSelect = document.getElementById('session_id');
+    
+    if (!programmeSelect.value || !sessionSelect.value) {
+        e.preventDefault();
+        alert('Please select both programme and session.');
+        return false;
+    }
+    
+    // Simple confirmation - if user cancels, prevent submission
+    const confirmed = confirm(`Are you sure you want to screen ${checkboxes.length} candidates?`);
+    if (!confirmed) {
+        e.preventDefault();
+        return false;
+    }
+    
+    // Allow form to submit normally
+    console.log('Form submitting...');
+    return true;
+});
+
+// Select all functionality
+document.getElementById('selectAllCheckbox').addEventListener('change', function() {
+    const checkboxes = document.querySelectorAll('.candidate-checkbox');
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = this.checked;
+    });
+});
+
+// Individual checkbox listeners
+document.querySelectorAll('.candidate-checkbox').forEach(checkbox => {
+    checkbox.addEventListener('change', function() {
+        const allCheckboxes = document.querySelectorAll('.candidate-checkbox');
+        const checkedCheckboxes = document.querySelectorAll('.candidate-checkbox:checked');
+        const selectAllCheckbox = document.getElementById('selectAllCheckbox');
+        
+        selectAllCheckbox.checked = allCheckboxes.length === checkedCheckboxes.length;
+        selectAllCheckbox.indeterminate = checkedCheckboxes.length > 0 && checkedCheckboxes.length < allCheckboxes.length;
+    });
+});
+
+// Select all button
+function selectAll() {
+    document.getElementById('selectAllCheckbox').checked = true;
+    document.getElementById('selectAllCheckbox').dispatchEvent(new Event('change'));
+}
+
+// Clear selection button
+function clearSelection() {
+    document.getElementById('selectAllCheckbox').checked = false;
+    document.getElementById('selectAllCheckbox').dispatchEvent(new Event('change'));
+}
+
+// Search functionality
+document.getElementById('candidateSearch').addEventListener('input', function() {
+    const searchTerm = this.value.toLowerCase();
+    const rows = document.querySelectorAll('#candidateTableBody tr');
+    
+    rows.forEach(row => {
+        const nameMatch = row.dataset.name.includes(searchTerm);
+        const jambMatch = row.dataset.jamb.includes(searchTerm);
+        const searchMatch = nameMatch || jambMatch;
+        
+        row.style.display = searchMatch ? '' : 'none';
+    });
+});
+
+// Status filter
+document.getElementById('statusFilter').addEventListener('change', function() {
+    const statusFilter = this.value;
+    const rows = document.querySelectorAll('#candidateTableBody tr');
+    
+    rows.forEach(row => {
+        const statusMatch = !statusFilter || row.dataset.status === statusFilter;
+        row.style.display = statusMatch ? '' : 'none';
+    });
+});
+</script>
+{% endblock %}

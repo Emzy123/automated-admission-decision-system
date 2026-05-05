@@ -1,0 +1,4 @@
+jamb_reg_number,full_name,email,phone,gender,date_of_birth,state_of_origin,lga_of_origin,first_choice_programme_id,utme_score,utme_subjects,post_utme_score,post_utme_present,olevel_results
+2024AB1234567CD,John Doe,john.doe@email.com,08012345678,Male,2000-05-15,Lagos,Ikeja,1,250,"English:75,Mathematics:80,Physics:70,Chemistry:65",72.5,TRUE,"WAEC:2023:English:B2,Mathematics:A1,Physics:B3,Chemistry:B2"
+2024AB2345678EF,Jane Smith,jane.smith@email.com,08023456789,Female,2001-03-22,Abuja,Gwagwalada,1,265,"English:78,Mathematics:85,Physics:72,Chemistry:70",75.0,TRUE,"NECO:2023:English:A1,Mathematics:A1,Physics:B2,Chemistry:B2"
+2024AB3456789GH,Ahmed Bello,ahmed.bello@email.com,08034567890,Male,2000-08-10,Kano,Kano Municipal,2,240,"English:70,Mathematics:75,Physics:68,Chemistry:62",68.5,TRUE,"WAEC:2023:English:B3,Mathematics:B2,Physics:C4,Chemistry:B3"

@@ -1,0 +1,216 @@
+{% extends "base.html" %}
+{% block title %}Screening Progress{% endblock %}
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <div class="mb-4">
+                        <i class="fa-solid fa-spinner fa-spin fa-3x text-primary"></i>
+                    </div>
+                    
+                    <h4 class="mb-3">Screening in Progress</h4>
+                    
+                    <div class="progress mb-3" style="height: 25px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             id="progressBar" role="progressbar" 
+                             style="width: 0%"
+                             aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+                            <span id="progressPercent">0%</span>
+                        </div>
+                    </div>
+                    
+                    <div class="row text-muted mb-3">
+                        <div class="col-md-4">
+                            <small class="d-block">Candidates Processed</small>
+                            <strong id="processedCount">0</strong>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="d-block">Total Candidates</small>
+                            <strong id="totalCount">0</strong>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="d-block">Time Remaining</small>
+                            <strong id="timeRemaining">Calculating...</strong>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info" id="statusMessage">
+                        <i class="fa-solid fa-info-circle me-2"></i>
+                        <span id="statusText">Initializing screening engine...</span>
+                    </div>
+                    
+                    <div class="mt-4">
+                        <button type="button" class="btn btn-outline-danger" id="cancelBtn">
+                            <i class="fa-solid fa-stop me-1"></i>Cancel Screening
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Real-time Log -->
+            <div class="card border-0 shadow-sm mt-3">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">Screening Log</h6>
+                </div>
+                <div class="card-body p-0">
+                    <div id="logContainer" class="p-3" style="max-height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.875em;">
+                        <div class="text-muted">Waiting for screening to start...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let batchId = {{ batch_id|default('null') }};
+let progressInterval = null;
+let logInterval = null;
+
+function startProgressMonitoring() {
+    if (!batchId) {
+        showError('No batch ID provided');
+        return;
+    }
+    
+    // Monitor progress
+    progressInterval = setInterval(updateProgress, 1000);
+    
+    // Monitor logs
+    logInterval = setInterval(updateLogs, 2000);
+    
+    // Initial update
+    updateProgress();
+    updateLogs();
+}
+
+async function updateProgress() {
+    try {
+        const response = await fetch(`/admission/screening/status/${batchId}`);
+        const status = await response.json();
+        
+        if (response.ok) {
+            updateProgressUI(status);
+            
+            if (status.status === 'completed') {
+                clearInterval(progressInterval);
+                clearInterval(logInterval);
+                
+                setTimeout(() => {
+                    window.location.href = `/admission/screening/results/${batchId}`;
+                }, 2000);
+            }
+        } else {
+            throw new Error(status.message || 'Failed to get status');
+        }
+    } catch (error) {
+        console.error('Progress update error:', error);
+        showError('Failed to update progress: ' + error.message);
+    }
+}
+
+function updateProgressUI(status) {
+    // Update progress bar
+    const progressBar = document.getElementById('progressBar');
+    const progressPercent = document.getElementById('progressPercent');
+    
+    progressBar.style.width = `${status.progress_percent}%`;
+    progressBar.setAttribute('aria-valuenow', status.progress_percent);
+    progressPercent.textContent = `${Math.round(status.progress_percent)}%`;
+    
+    // Update counts
+    document.getElementById('processedCount').textContent = status.processed;
+    document.getElementById('totalCount').textContent = status.total_candidates;
+    
+    // Update status message
+    document.getElementById('statusText').textContent = status.message;
+    
+    // Update time remaining
+    if (status.processed < status.total_candidates && status.processed > 0) {
+        const remaining = status.total_candidates - status.processed;
+        const rate = status.processed / 10; // Rough estimate: 10 candidates per second
+        const etaSeconds = Math.ceil(remaining / rate);
+        
+        if (etaSeconds < 60) {
+            document.getElementById('timeRemaining').textContent = `${etaSeconds} seconds`;
+        } else {
+            const minutes = Math.floor(etaSeconds / 60);
+            const seconds = etaSeconds % 60;
+            document.getElementById('timeRemaining').textContent = `${minutes}m ${seconds}s`;
+        }
+    } else if (status.processed >= status.total_candidates) {
+        document.getElementById('timeRemaining').textContent = 'Completed';
+    } else {
+        document.getElementById('timeRemaining').textContent = 'Calculating...';
+    }
+    
+    // Update status alert type
+    const statusAlert = document.getElementById('statusMessage');
+    statusAlert.className = 'alert alert-info';
+    
+    if (status.status === 'completed') {
+        statusAlert.className = 'alert alert-success';
+        document.getElementById('statusText').innerHTML = 
+            '<i class="fa-solid fa-check-circle me-2"></i>Screening completed successfully!';
+    } else if (status.progress_percent > 75) {
+        statusAlert.className = 'alert alert-warning';
+    }
+}
+
+async function updateLogs() {
+    try {
+        const response = await fetch(`/api/admission/logs/${batchId}`);
+        const logs = await response.json();
+        
+        if (response.ok && logs.logs) {
+            const logContainer = document.getElementById('logContainer');
+            logContainer.innerHTML = logs.logs.map(log => 
+                `<div class="text-${log.level || 'muted'} small">
+                    [${new Date(log.timestamp).toLocaleTimeString()}] ${log.message}
+                </div>`
+            ).join('');
+            
+            // Auto-scroll to bottom
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+    } catch (error) {
+        console.error('Log update error:', error);
+    }
+}
+
+function showError(message) {
+    const statusAlert = document.getElementById('statusMessage');
+    statusAlert.className = 'alert alert-danger';
+    document.getElementById('statusText').innerHTML = 
+        `<i class="fa-solid fa-exclamation-triangle me-2"></i>${message}`;
+    
+    clearInterval(progressInterval);
+    clearInterval(logInterval);
+    
+    document.getElementById('cancelBtn').textContent = 'Close';
+    document.getElementById('cancelBtn').onclick = function() {
+        window.location.href = '/admission/screening';
+    };
+}
+
+// Cancel button handler
+document.getElementById('cancelBtn').addEventListener('click', function() {
+    if (confirm('Are you sure you want to cancel the screening process?')) {
+        clearInterval(progressInterval);
+        clearInterval(logInterval);
+        window.location.href = '/admission/screening';
+    }
+});
+
+// Start monitoring when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    if (batchId) {
+        startProgressMonitoring();
+    } else {
+        showError('No batch ID provided');
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+{% block title %}Preview Import - CUSTECH Admission{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1">Preview Import</h4>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.candidates') }}">Candidates</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.upload_candidates') }}">Upload</a></li>
+                    <li class="breadcrumb-item active">Preview</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Format Detection Alert -->
+    <div class="alert {{ 'alert-success' if preview.is_jamb_format else 'alert-warning' }} d-flex align-items-center">
+        <i class="bi {{ 'bi-check-circle-fill' if preview.is_jamb_format else 'bi-exclamation-triangle-fill' }} me-2"></i>
+        <div>
+            <strong>{{ 'JAMB Format Detected!' if preview.is_jamb_format else 'Standard CSV Format' }}</strong><br>
+            <small>
+                {% if preview.is_jamb_format %}
+                    File contains JAMB-specific columns. System will automatically parse UTME subjects and O'Level results.
+                {% else %}
+                    Standard CSV format detected. Ensure your file has the required columns.
+                {% endif %}
+            </small>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- File Info Card -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-file-earmark-text me-2"></i>File Information
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <table class="table table-sm table-borderless">
+                        <tr><td><strong>Filename:</strong></td><td>{{ filename }}</td></tr>
+                        <tr><td><strong>Total Rows:</strong></td><td>{{ preview.total_rows }}</td></tr>
+                        <tr><td><strong>Format:</strong></td><td>{{ 'JAMB Format' if preview.is_jamb_format else 'Standard CSV' }}</td></tr>
+                        <tr><td><strong>Columns:</strong></td><td>{{ preview.columns|length }}</td></tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Import Actions -->
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-upload me-2"></i>Import Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('admin.upload_candidates') }}" enctype="multipart/form-data">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="import">
+                        <input type="hidden" name="temp_file_path" value="{{ temp_file_path }}">
+                        <input type="hidden" name="session_id" value="{{ session_id }}">
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-check-circle me-2"></i>Import All Candidates
+                            </button>
+                            <a href="{{ url_for('admin.upload_candidates') }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-2"></i>Back to Upload
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview Data Card -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-eye me-2"></i>Data Preview (First {{ preview.preview|length }} Rows)
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Row</th>
+                                    <th>JAMB Reg</th>
+                                    <th>Name</th>
+                                    <th>State</th>
+                                    <th>UTME Score</th>
+                                    {% if preview.is_jamb_format %}
+                                    <th>Subjects</th>
+                                    {% endif %}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for row in preview.preview %}
+                                <tr>
+                                    <td><span class="badge bg-secondary">{{ row.row }}</span></td>
+                                    <td><code>{{ row.jamb_reg }}</code></td>
+                                    <td>{{ row.name }}</td>
+                                    <td>{{ row.state }}</td>
+                                    <td><strong>{{ row.utme_score }}</strong></td>
+                                    {% if preview.is_jamb_format %}
+                                    <td>
+                                        {% if row.subjects %}
+                                            {% for subject, score in row.subjects.items() %}
+                                                <span class="badge bg-light text-dark me-1">{{ subject }}: {{ score }}</span>
+                                            {% endfor %}
+                                        {% else %}
+                                            <span class="text-muted">No subjects</span>
+                                        {% endif %}
+                                    </td>
+                                    {% endif %}
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    {% if preview.total_rows > 5 %}
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <small>
+                            Showing first {{ preview.preview|length }} of {{ preview.total_rows }} rows.
+                            All {{ preview.total_rows }} candidates will be processed during import.
+                        </small>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Column Information -->
+            <div class="card shadow-sm mt-4">
+                <div class="card-header bg-white">
+                    <h6 class="mb-0">
+                        <i class="bi bi-columns-gap me-2"></i>Detected Columns
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        {% for column in preview.columns %}
+                        <div class="col-md-4 mb-2">
+                            <span class="badge bg-light text-dark">{{ column }}</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}CUSTECH Admission Decision System - Government Academic Portal{% endblock %}</title>
+    
+    <!-- Accessibility Meta Tags -->
+    <meta name="description" content="Official CUSTECH Admission System - Government compliant academic portal for student admissions and screening">
+    <meta name="keywords" content="CUSTECH, admission, academic, government, education, Nigeria">
+    <meta name="author" content="CUSTECH Administration">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <!-- CSRF Token -->
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    
+    <!-- Skip to Main Content Link for Screen Readers -->
+    <style>
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: var(--primary);
+            color: white;
+            padding: 8px;
+            text-decoration: none;
+            border-radius: 0 0 4px 0;
+            z-index: 10000;
+        }
+        .skip-link:focus {
+            top: 0;
+        }
+    </style>
+    
+    <!-- Google Fonts - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome 6 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/theme-modern.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/accessibility.css') }}">
+    
+    {% block styles %}{% endblock %}
+</head>
+<body class="app-body w-100 theme-modern">
+<!-- Skip to Main Content for Accessibility -->
+<a href="#main-content" class="skip-link">Skip to main content</a>
+
+<!-- Loading Overlay -->
+<div class="loading-overlay" id="loadingOverlay" role="dialog" aria-label="Loading content">
+    <div class="loading-spinner">
+        <div class="spinner" role="status" aria-label="Loading"></div>
+        <div class="loading-text">Processing...</div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title" id="confirmModalLabel">
+                    <i class="fa-solid fa-exclamation-triangle me-2"></i>Confirm Action
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="confirmMessage" class="mb-0">Are you sure you want to perform this action? This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fa-solid fa-times me-1"></i>Cancel
+                </button>
+                <button type="button" class="btn btn-danger" id="confirmButton">
+                    <i class="fa-solid fa-trash me-1"></i>Delete
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Sidebar -->
+<aside class="sidebar" id="sidebar">
+    <div class="sidebar-header">
+        <div class="sidebar-brand">
+            <div class="brand-icon">
+                <i class="fa-solid fa-building-columns" aria-hidden="true"></i>
+            </div>
+            <div class="brand-text">
+                <h4>CUSTECH</h4>
+                <small>Gov. Academic Portal</small>
+            </div>
+        </div>
+        <button class="sidebar-toggle d-lg-none" type="button" id="sidebarClose">
+            <i class="fa-solid fa-times"></i>
+        </button>
+    </div>
+    
+    <nav class="sidebar-nav">
+        {% block sidebar %}
+        <ul class="nav flex-column" role="menubar">
+            <li class="nav-item" role="none">
+                <a class="nav-link" href="{{ url_for('admin.dashboard') }}" data-page="dashboard" role="menuitem">
+                    <i class="fa-solid fa-gauge-high nav-icon" aria-hidden="true"></i>
+                    <span class="nav-text">Dashboard</span>
+                </a>
+            </li>
+            <li class="nav-item" role="none">
+                <a class="nav-link" href="{{ url_for('admin.university_config') }}" data-page="university" role="menuitem">
+                    <i class="fa-solid fa-school nav-icon" aria-hidden="true"></i>
+                    <span class="nav-text">University Config</span>
+                </a>
+            </li>
+            <li class="nav-item" role="none">
+                <a class="nav-link" href="{{ url_for('admin.university_catchment') }}" data-page="catchment" role="menuitem">
+                    <i class="fa-solid fa-map-location-dot nav-icon" aria-hidden="true"></i>
+                    <span class="nav-text">Catchment States</span>
+                </a>
+            </li>
+            <li class="nav-item" role="none">
+                <a class="nav-link" href="{{ url_for('admin.faculties') }}" data-page="faculties" role="menuitem">
+                    <i class="fa-solid fa-building nav-icon" aria-hidden="true"></i>
+                    <span class="nav-text">Faculties</span>
+                </a>
+            </li>
+            <li class="nav-item" role="none">
+                <a class="nav-link" href="{{ url_for('admin.candidates') }}" data-page="candidates" role="menuitem">
+                    <i class="fa-solid fa-users nav-icon" aria-hidden="true"></i>
+                    <span class="nav-text">Candidates</span>
+                </a>
+            </li>
+            <li class="nav-item" role="none">
+                <a class="nav-link" href="{{ url_for('admission.screening_dashboard') }}" data-page="screening" role="menuitem">
+                    <i class="fa-solid fa-magnifying-glass-chart nav-icon" aria-hidden="true"></i>
+                    <span class="nav-text">Screening</span>
+                </a>
+            </li>
+            <li class="nav-item" role="none">
+                <a class="nav-link" href="{{ url_for('admission.merit_list_dashboard') }}" data-page="merit_list" role="menuitem">
+                    <i class="fa-solid fa-trophy nav-icon" aria-hidden="true"></i>
+                    <span class="nav-text">Merit List &amp; Admissions</span>
+                </a>
+            </li>
+            <li class="nav-item" role="none">
+                <a class="nav-link" href="{{ url_for('admin.programmes') }}" data-page="programmes" role="menuitem">
+                    <i class="fa-solid fa-building-columns nav-icon" aria-hidden="true"></i>
+                    <span class="nav-text">Programmes</span>
+                </a>
+            </li>
+            <li class="nav-item" role="none">
+                <a class="nav-link" href="{{ url_for('admin.reports') }}" data-page="reports" role="menuitem">
+                    <i class="fa-solid fa-chart-bar nav-icon" aria-hidden="true"></i>
+                    <span class="nav-text">Reports</span>
+                </a>
+            </li>
+            {% if current_user.is_authenticated and current_user.role == 'admin' %}
+            <li class="nav-item" role="none">
+                <a class="nav-link" href="{{ url_for('admin.audit_logs') }}" data-page="audit_logs" role="menuitem">
+                    <i class="fa-solid fa-clipboard-list nav-icon" aria-hidden="true"></i>
+                    <span class="nav-text">Audit Logs</span>
+                </a>
+            </li>
+            <li class="nav-item" role="none">
+                <a class="nav-link" href="{{ url_for('auth.register') }}" data-page="users" role="menuitem">
+                    <i class="fa-solid fa-user-plus nav-icon" aria-hidden="true"></i>
+                    <span class="nav-text">Create User</span>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+        {% endblock %}
+    </nav>
+</aside>
+
+<!-- Main Content -->
+<div class="main-content">
+    <!-- Government Header Banner -->
+    <div class="government-header" role="banner">
+        <div class="container-fluid">
+            <div class="row align-items-center py-2">
+                <div class="col-md-6">
+                    <div class="government-identity">
+                        <div class="seal-placeholder">
+                            <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                        </div>
+                        <div class="government-text">
+                            <div class="official-badge">OFFICIAL GOVERNMENT PORTAL</div>
+                            <div class="ministry-name">Federal Ministry of Education</div>
+                            <div class="institution-name">CUSTECH Admission System</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <div class="government-actions">
+                        <button class="accessibility-toggle btn btn-outline-primary btn-sm" aria-label="Toggle accessibility options">
+                            <i class="fa-solid fa-universal-access" aria-hidden="true"></i>
+                            Accessibility
+                        </button>
+                        <button class="language-toggle btn btn-outline-primary btn-sm" aria-label="Change language">
+                            <i class="fa-solid fa-language" aria-hidden="true"></i>
+                            EN
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Top Header -->
+    <header class="top-header" role="banner">
+        <div class="header-left">
+            <button class="header-btn sidebar-toggle-btn" type="button" id="sidebarToggle" aria-label="Toggle sidebar">
+                <i class="fa-solid fa-bars" aria-hidden="true"></i>
+            </button>
+            <div class="page-title">
+                <h5 class="mb-0">{% block page_title %}Dashboard{% endblock %}</h5>
+            </div>
+        </div>
+        
+        <div class="header-right">
+            <!-- User Menu -->
+            <div class="dropdown">
+                <button class="header-btn user-menu-btn" type="button" data-bs-toggle="dropdown">
+                    <div class="user-avatar">
+                        <i class="fa-solid fa-user-shield"></i>
+                    </div>
+                    <div class="user-info d-none d-md-block">
+                        <div class="user-name">{{ current_user.full_name if current_user.is_authenticated else 'Guest' }}</div>
+                        <small class="text-muted">{{ current_user.role|title if current_user.is_authenticated else 'Not logged in' }}</small>
+                    </div>
+                    <i class="fa-solid fa-chevron-down ms-2"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    {% if current_user.is_authenticated %}
+                        <li><a class="dropdown-item" href="#"><i class="fa-solid fa-user me-2"></i>Profile</a></li>
+                        <li><a class="dropdown-item" href="#"><i class="fa-solid fa-cog me-2"></i>Settings</a></li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{{ url_for('auth.logout') }}"><i class="fa-solid fa-right-from-bracket me-2"></i>Logout</a></li>
+                    {% else %}
+                        <li><a class="dropdown-item" href="{{ url_for('auth.login') }}"><i class="fa-solid fa-sign-in-alt me-2"></i>Login</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </header>
+
+<!-- Quick Stats Bar - Only for authenticated users -->
+{% if current_user.is_authenticated %}
+<div style="padding: 20px 32px 0 32px; background: #f1f5f9;">
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px;">
+        <div style="background: white; border-radius: 12px; padding: 16px 20px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <div style="display: flex; align-items: center; gap: 8px; color: #64748b; font-size: 13px; margin-bottom: 10px;">
+                <i class="fa-solid fa-calendar-alt"></i>
+                <span>Current Session</span>
+            </div>
+            <div style="font-size: 22px; font-weight: 700; color: #0f172a;">{{ global_active_session.name if global_active_session else 'None' }}</div>
+        </div>
+        <div style="background: white; border-radius: 12px; padding: 16px 20px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <div style="display: flex; align-items: center; gap: 8px; color: #64748b; font-size: 13px; margin-bottom: 10px;">
+                <i class="fa-solid fa-book"></i>
+                <span>Programmes</span>
+            </div>
+            <div style="font-size: 28px; font-weight: 700; color: #0f172a;">{{ global_total_programmes }}</div>
+        </div>
+        <div style="background: white; border-radius: 12px; padding: 16px 20px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <div style="display: flex; align-items: center; gap: 8px; color: #64748b; font-size: 13px; margin-bottom: 10px;">
+                <i class="fa-solid fa-building"></i>
+                <span>Faculties</span>
+            </div>
+            <div style="font-size: 28px; font-weight: 700; color: #0f172a;">{{ global_total_faculties }}</div>
+        </div>
+        <div style="background: white; border-radius: 12px; padding: 16px 20px; border: 1px solid #e2e8f0; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+            <div style="display: flex; align-items: center; gap: 8px; color: #64748b; font-size: 13px; margin-bottom: 10px;">
+                <i class="fa-solid fa-circle" style="font-size: 9px; color: #16a34a;"></i>
+                <span>System Status</span>
+            </div>
+            <div style="font-size: 22px; font-weight: 700; color: #16a34a;">Online</div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Breadcrumb Navigation - Only for authenticated users -->
+{% if current_user.is_authenticated %}
+{% block breadcrumb %}{% endblock %}
+{% endif %}
+
+<!-- Page Content -->
+    <main class="page-content" id="main-content" role="main">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    {% set alert_class = {
+                        'success': 'success',
+                        'error': 'danger',
+                        'danger': 'danger',
+                        'warning': 'warning',
+                        'info': 'info'
+                    }.get(category, 'secondary') %}
+                    <div class="alert alert-{{ alert_class }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close alert"></button>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+<!-- Mobile Sidebar Overlay -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+<!-- Toast Container -->
+<div class="toast-container position-fixed top-0 end-0 p-3" style="z-index: 1080;">
+    <!-- Toasts will be dynamically added here -->
+</div>
+
+<!-- Footer -->
+    <footer class="app-footer" role="contentinfo">
+        <div class="container-fluid px-3 px-lg-4">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="footer-links">
+                        {% if current_user.is_authenticated %}
+                        <a href="#" class="footer-link">Help</a>
+                        <a href="#" class="footer-link">Documentation</a>
+                        <a href="#" class="footer-link">Support</a>
+                        <a href="#" class="footer-link">Accessibility</a>
+                        {% else %}
+                        <a href="{{ url_for('auth.login') }}" class="footer-link">Login</a>
+                        <a href="#" class="footer-link">About CUSTECH</a>
+                        <a href="#" class="footer-link">Contact</a>
+                        <a href="#" class="footer-link">Accessibility</a>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <div class="footer-info">
+                        {% if current_user.is_authenticated %}
+                        <div class="system-health d-flex align-items-center gap-3 justify-content-md-end">
+                            <div class="health-item">
+                                <i class="fa-solid fa-database text-success me-1" aria-hidden="true"></i>
+                                <span class="health-label">Database:</span>
+                                <span class="health-status text-success">Connected</span>
+                            </div>
+                            <div class="health-item">
+                                <i class="fa-solid fa-server text-success me-1" aria-hidden="true"></i>
+                                <span class="health-label">CAPS:</span>
+                                <span class="health-status text-success">Online</span>
+                            </div>
+                            <div class="health-item">
+                                <i class="fa-solid fa-cloud-arrow-down text-info me-1" aria-hidden="true"></i>
+                                <span class="health-label">Backup:</span>
+                                <span class="health-status text-info">Today</span>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div class="text-muted small mt-1">
+                            &copy; 2024 CUSTECH Admission System - Official Government Portal | 
+                            <a href="#" class="footer-link">Privacy Policy</a> | 
+                            <a href="#" class="footer-link">Terms of Service</a> | 
+                            <a href="#" class="footer-link">Accessibility Statement</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+</div>
+
+<!-- Scripts -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+
+<script>
+// Loading Spinner Functions
+function showLoading(text = 'Processing...') {
+    const overlay = document.getElementById('loadingOverlay');
+    const loadingText = overlay.querySelector('.loading-text');
+    loadingText.textContent = text;
+    overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+}
+
+function hideLoading() {
+    const overlay = document.getElementById('loadingOverlay');
+    overlay.style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+// Button loading state
+function setButtonLoading(button, originalText) {
+    button.classList.add('btn-loading');
+    button.innerHTML = '<span class="spinner-sm"></span>Loading...';
+    button.disabled = true;
+    button.dataset.originalText = originalText;
+}
+
+function resetButtonLoading(button) {
+    button.classList.remove('btn-loading');
+    button.innerHTML = button.dataset.originalText || button.textContent;
+    button.disabled = false;
+}
+
+// Confirmation Modal Functions
+let currentConfirmAction = null;
+
+function showConfirmModal(message, action, buttonText = 'Delete', buttonClass = 'btn-danger') {
+    const modal = document.getElementById('confirmModal');
+    const messageEl = document.getElementById('confirmMessage');
+    const confirmBtn = document.getElementById('confirmButton');
+    
+    messageEl.textContent = message;
+    confirmBtn.textContent = buttonText;
+    confirmBtn.className = `btn ${buttonClass}`;
+    currentConfirmAction = action;
+    
+    const modalInstance = new bootstrap.Modal(modal);
+    modalInstance.show();
+}
+
+function confirmAction() {
+    if (currentConfirmAction) {
+        currentConfirmAction();
+        const modal = bootstrap.Modal.getInstance(document.getElementById('confirmModal'));
+        modal.hide();
+        currentConfirmAction = null;
+    }
+}
+
+// Sidebar functionality
+function toggleSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    sidebar.classList.toggle('collapsed');
+    overlay.classList.toggle('show');
+}
+
+function closeSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.getElementById('sidebarOverlay');
+    sidebar.classList.remove('collapsed');
+    overlay.classList.remove('show');
+}
+
+// Auto-loading for forms and buttons
+document.addEventListener('DOMContentLoaded', function() {
+    // Sidebar toggle
+    document.getElementById('sidebarToggle').addEventListener('click', toggleSidebar);
+    document.getElementById('sidebarClose').addEventListener('click', closeSidebar);
+    document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
+
+    // Active navigation highlighting
+    const currentPath = window.location.pathname;
+    const navLinks = document.querySelectorAll('.nav-link');
+    navLinks.forEach(link => {
+        if (link.getAttribute('href') === currentPath) {
+            link.classList.add('active');
+        }
+    });
+
+    // Add loading to forms with data-loading attribute
+    const forms = document.querySelectorAll('form[data-loading]');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                setButtonLoading(submitBtn, submitBtn.textContent);
+            }
+            showLoading('Submitting form...');
+        });
+    });
+
+    // Add loading to buttons with data-loading attribute
+    const buttons = document.querySelectorAll('button[data-loading]');
+    buttons.forEach(button => {
+        button.addEventListener('click', function() {
+            setButtonLoading(button, button.textContent);
+        });
+    });
+
+    // Add confirmation to delete buttons with data-confirm attribute
+    const deleteButtons = document.querySelectorAll('button[data-confirm], a[data-confirm]');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            e.preventDefault();
+            const message = this.dataset.confirm || 'Are you sure you want to delete this item?';
+            const action = () => {
+                if (this.tagName === 'A') {
+                    window.location.href = this.href;
+                } else if (this.tagName === 'BUTTON' && this.type === 'submit') {
+                    this.form.submit();
+                } else {
+                    this.click();
+                }
+            };
+            showConfirmModal(message, action);
+        });
+    });
+
+    // Confirm modal button handler
+    document.getElementById('confirmButton').addEventListener('click', confirmAction);
+});
+</script>
+
+{% block scripts %}{% endblock %}
+</body>
+</html>

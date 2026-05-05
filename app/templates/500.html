@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Server Error - CUSTECH Admission System{% endblock %}
+{% block styles %}
+<style>
+.error-container {
+    min-height: 80vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    color: white;
+}
+.error-content {
+    text-align: center;
+    max-width: 600px;
+    padding: 2rem;
+}
+.error-code {
+    font-size: 8rem;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 1rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+.error-title {
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+}
+.error-message {
+    font-size: 1.1rem;
+    margin-bottom: 2rem;
+    opacity: 0.9;
+}
+.btn-home {
+    background-color: #fff;
+    color: #f5576c;
+    padding: 0.75rem 2rem;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    display: inline-block;
+}
+.btn-home:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+    color: #f093fb;
+}
+.custech-logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 2rem;
+    letter-spacing: 1px;
+}
+.error-details {
+    background-color: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 2rem;
+    backdrop-filter: blur(10px);
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="error-container">
+    <div class="error-content">
+        <div class="custech-logo">CUSTECH</div>
+        <div class="error-code">500</div>
+        <h1 class="error-title">Server Error</h1>
+        <p class="error-message">
+            We're sorry, but something went wrong on our end. 
+            Our technical team has been notified and is working to resolve this issue.
+        </p>
+        <div class="error-details">
+            <p class="mb-0">
+                <strong>Error Reference:</strong> #{{ request_id or 'SYS' + moment().format('YYYYMMDDHHmmss') }}<br>
+                <strong>Time:</strong> {{ moment().format('YYYY-MM-DD HH:mm:ss') }}<br>
+                <strong>Please contact the system administrator if this problem persists.</strong>
+            </p>
+        </div>
+        <p class="error-message">
+            Confluence University of Science and Technology, Osara<br>
+            Admission Management System
+        </p>
+        <a href="{{ url_for('admin.dashboard') }}" class="btn-home">
+            <i class="fa-solid fa-home me-2"></i>Return to Dashboard
+        </a>
+    </div>
+</div>
+{% endblock %}

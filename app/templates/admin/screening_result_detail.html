@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+{% block title %}Screening Result Detail{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('admission.screening_dashboard') }}">Screening</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ record.candidate.full_name }}</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-1">{{ record.candidate.full_name }}</h1>
+        <p class="text-muted mb-0">{{ record.candidate.jamb_reg_number }} - Screening Result</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('admin.candidate_detail', id=record.candidate.id) }}" class="btn btn-outline-secondary">
+            <i class="fa-solid fa-user me-1"></i>Candidate Profile
+        </a>
+        {% if current_user.role == 'admin' %}
+            <button class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#overrideModal">
+                <i class="fa-solid fa-edit me-1"></i>Override Decision
+            </button>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Result Summary -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h5 class="mb-3">Screening Decision</h5>
+                <div class="d-flex align-items-center gap-3">
+                    <span class="badge {{ 'bg-success' if record.status == 'recommended' else 'bg-danger' }} fs-6 px-3 py-2">
+                        {% if record.status == 'recommended' %}
+                            <i class="fa-solid fa-check-circle me-2"></i>Recommended for Admission
+                        {% else %}
+                            <i class="fa-solid fa-times-circle me-2"></i>Not Recommended
+                        {% endif %}
+                    </span>
+                    <div>
+                        <div class="small text-muted">Aggregate Score</div>
+                        <div class="h4 mb-0">{{ record.aggregate_score or 'N/A' }}</div>
+                    </div>
+                    {% if record.quota_category %}
+                        <div>
+                            <div class="small text-muted">Quota Category</div>
+                            <span class="badge bg-info">{{ record.quota_category|capitalize }}</span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-4 text-end">
+                {% if record.rejection_reason %}
+                    <div class="text-danger">
+                        <i class="fa-solid fa-exclamation-triangle me-1"></i>
+                        <strong>Reason:</strong> {{ record.rejection_reason|replace('_', ' ')|title }}
+                    </div>
+                {% endif %}
+                <div class="small text-muted mt-2">
+                    Screened on {{ record.created_at.strftime('%d %b %Y at %I:%M %p') if record.created_at else 'N/A' }}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Screening Steps -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Screening Evaluation Steps</h5>
+    </div>
+    <div class="card-body">
+        {% if record.evaluation_log %}
+            <div class="row">
+                {% for step in record.evaluation_log %}
+                    {% if step.step != 'admin_override' %}
+                        <div class="col-md-6 mb-3">
+                            <div class="card border {{ 'border-success' if step.passed else 'border-danger' }}">
+                                <div class="card-body py-2">
+                                    <div class="d-flex align-items-center">
+                                        <div class="me-2">
+                                            {% if step.passed %}
+                                                <i class="fa-solid fa-check-circle text-success fa-lg"></i>
+                                            {% else %}
+                                                <i class="fa-solid fa-times-circle text-danger fa-lg"></i>
+                                            {% endif %}
+                                        </div>
+                                        <div class="flex-grow-1">
+                                            <strong>{{ step.step|replace('_', ' ')|title }}</strong>
+                                            <div class="small text-muted">{{ step.message }}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            
+            <!-- Aggregate Score Breakdown -->
+            {% set aggregate_step = record.evaluation_log|selectattr('step', 'equalto', 'aggregate')|first %}
+            {% if aggregate_step %}
+                <div class="mt-4">
+                    <h6>Aggregate Score Breakdown</h6>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="text-center p-3 bg-light rounded">
+                                <div class="small text-muted">JAMB Component</div>
+                                <div class="h5 mb-0">{{ aggregate_step.jamb_component }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 bg-light rounded">
+                                <div class="small text-muted">Post-UTME Component</div>
+                                <div class="h5 mb-0">{{ aggregate_step.post_utme_component }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 bg-light rounded">
+                                <div class="small text-muted">O'Level Component</div>
+                                <div class="h5 mb-0">{{ aggregate_step.olevel_component }}</div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="text-center p-3 bg-primary text-white rounded">
+                                <div class="small">Total Aggregate</div>
+                                <div class="h4 mb-0">{{ aggregate_step.aggregate }}</div>
+                                <div class="small">{{ aggregate_step.formula or 'STANDARD' }}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-muted">
+                            Formula: JAMB Score ÷ {{ aggregate_step.jamb_component and (record.candidate.utme_score / aggregate_step.jamb_component)|round(1) or 8.0 }} 
+                            {% if aggregate_step.post_utme_component > 0 %}+ Post-UTME Score ÷ {{ aggregate_step.post_utme_component and (record.candidate.post_utme_score / aggregate_step.post_utme_component)|round(1) or 4.0 }}{% endif %}
+                            {% if aggregate_step.olevel_component > 0 %}+ O'Level Component{% endif %}
+                        </small>
+                    </div>
+                </div>
+            {% endif %}
+            
+        {% else %}
+            <p class="text-muted mb-0">No evaluation log available.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Candidate Details -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Candidate Information</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Programme:</dt>
+                    <dd class="col-sm-8">{{ record.programme.name if record.programme else 'Not Set' }}</dd>
+                    <dt class="col-sm-4">Session:</dt>
+                    <dd class="col-sm-8">{{ record.session.name if record.session else 'Not Set' }}</dd>
+                    <dt class="col-sm-4">State:</dt>
+                    <dd class="col-sm-8">{{ record.candidate.state_of_origin or 'Not Set' }}</dd>
+                    <dt class="col-sm-4">Email:</dt>
+                    <dd class="col-sm-8">{{ record.candidate.email or 'Not Set' }}</dd>
+                </dl>
+            </div>
+            <div class="col-md-6">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">UTME Score:</dt>
+                    <dd class="col-sm-8">{{ record.candidate.utme_score }}</dd>
+                    <dt class="col-sm-4">Post-UTME:</dt>
+                    <dd class="col-sm-8">{{ record.candidate.post_utme_score if record.candidate.post_utme_score else 'Not Taken' }}</dd>
+                    <dt class="col-sm-4">Phone:</dt>
+                    <dd class="col-sm-8">{{ record.candidate.phone or 'Not Set' }}</dd>
+                    <dt class="col-sm-4">Gender:</dt>
+                    <dd class="col-sm-8">{{ record.candidate.gender or 'Not Set' }}</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- UTME Subjects -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">UTME Subjects</h5>
+    </div>
+    <div class="card-body">
+        {% if record.candidate.utme_subjects %}
+            <div class="row">
+                {% for subject, score in record.candidate.utme_subjects.items() %}
+                    <div class="col-md-3 mb-2">
+                        <div class="border rounded p-2 text-center">
+                            <div class="small text-muted">{{ subject }}</div>
+                            <div class="h6 mb-0">{{ score }}</div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted mb-0">No UTME subjects recorded.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- O'Level Results -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">O'Level Results</h5>
+    </div>
+    <div class="card-body">
+        {% if record.candidate.olevel_results %}
+            {% set sittings = {} %}
+            {% for result in record.candidate.olevel_results %}
+                {% set _ = sittings.update({result.sitting_number: sittings.get(result.sitting_number, []) + [result]}) %}
+            {% endfor %}
+            
+            {% for sitting, results in sittings.items() %}
+                <h6 class="mb-2">Sitting {{ sitting }}</h6>
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Subject</th>
+                                <th>Grade</th>
+                                <th>Exam Body</th>
+                                <th>Year</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for result in results %}
+                                <tr>
+                                    <td>{{ result.subject }}</td>
+                                    <td>
+                                        <span class="badge {{ 'bg-success' if result.grade in ['A1', 'B2', 'B3', 'C4', 'C5', 'C6'] else 'bg-danger' }}">
+                                            {{ result.grade }}
+                                        </span>
+                                    </td>
+                                    <td>{{ result.exam_body }}</td>
+                                    <td>{{ result.exam_year }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-muted mb-0">No O'Level results recorded.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Override Modal -->
+{% if current_user.role == 'admin' %}
+<div class="modal fade" id="overrideModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Override Screening Decision</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{{ url_for('admission.override_screening_result', record_id=record.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">New Decision</label>
+                        <select class="form-select" name="new_status" required>
+                            <option value="">Select...</option>
+                            <option value="recommended" {% if record.status == 'recommended' %}selected{% endif %}>
+                                Recommend for Admission
+                            </option>
+                            <option value="rejected" {% if record.status == 'rejected' %}selected{% endif %}>
+                                Not Recommended
+                            </option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reason for Override</label>
+                        <textarea class="form-control" name="reason" rows="3" required 
+                                  placeholder="Explain why this decision is being overridden..."></textarea>
+                    </div>
+                    <div class="alert alert-warning">
+                        <i class="fa-solid fa-exclamation-triangle me-2"></i>
+                        This action will be logged and cannot be undone. Please provide a clear justification.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fa-solid fa-edit me-1"></i>Override Decision
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Admin Override History -->
+{% set override_logs = record.evaluation_log|selectattr('step', 'equalto', 'admin_override')|list %}
+{% if override_logs %}
+<div class="card border-0 shadow-sm mt-3">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Override History</h5>
+    </div>
+    <div class="card-body">
+        {% for override in override_logs %}
+            <div class="alert alert-warning">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <strong>Decision overridden by {{ override.admin_name }}</strong>
+                        <div class="small text-muted">
+                            {{ override.timestamp|datetimeformat }} - Changed from {{ override.old_status }} to {{ override.new_status }}
+                        </div>
+                        <div class="mt-1">
+                            <em>Reason: {{ override.reason }}</em>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+{% endblock %}

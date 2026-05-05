@@ -1,0 +1,213 @@
+{% extends "base.html" %}
+{% block title %}{{ "Add Candidate" if mode == "create" else "Edit Candidate" }}{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.candidates') }}">Candidates</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ "Add" if mode == "create" else "Edit" }}</li>
+    </ol>
+</nav>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">{{ "Manual Candidate Entry" if mode == "create" else "Edit Candidate" }}</h5>
+    </div>
+    <div class="card-body">
+        <form method="post" id="candidateForm">
+            {{ form.hidden_tag() }}
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.jamb_reg_number.label.text }}</label>
+                    {{ form.jamb_reg_number(class="form-control" + (" is-invalid" if form.jamb_reg_number.errors else ""), id="jambRegField") }}
+                    <div id="jambRegFeedback" class="small mt-1"></div>
+                    {% for error in form.jamb_reg_number.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">{{ form.full_name.label.text }}</label>
+                    {{ form.full_name(class="form-control" + (" is-invalid" if form.full_name.errors else "")) }}
+                    {% for error in form.full_name.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.email.label.text }}</label>
+                    {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else "")) }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.phone.label.text }}</label>
+                    {{ form.phone(class="form-control" + (" is-invalid" if form.phone.errors else "")) }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.gender.label.text }}</label>
+                    {{ form.gender(class="form-select" + (" is-invalid" if form.gender.errors else "")) }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.date_of_birth.label.text }}</label>
+                    {{ form.date_of_birth(class="form-control" + (" is-invalid" if form.date_of_birth.errors else "")) }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.state_of_origin.label.text }}</label>
+                    {{ form.state_of_origin(class="form-control" + (" is-invalid" if form.state_of_origin.errors else "")) }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.lga_of_origin.label.text }}</label>
+                    {{ form.lga_of_origin(class="form-control" + (" is-invalid" if form.lga_of_origin.errors else "")) }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.session_id.label.text }}</label>
+                    {{ form.session_id(class="form-select" + (" is-invalid" if form.session_id.errors else "")) }}
+                </div>
+                <div class="col-md-8">
+                    <label class="form-label">{{ form.first_choice_programme_id.label.text }}</label>
+                    {{ form.first_choice_programme_id(class="form-select" + (" is-invalid" if form.first_choice_programme_id.errors else "")) }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.utme_score.label.text }}</label>
+                    {{ form.utme_score(class="form-control" + (" is-invalid" if form.utme_score.errors else "")) }}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.post_utme_score.label.text }}</label>
+                    {{ form.post_utme_score(class="form-control" + (" is-invalid" if form.post_utme_score.errors else "")) }}
+                </div>
+                <div class="col-md-4 d-flex align-items-end">
+                    <div class="form-check mb-2">
+                        {{ form.post_utme_present(class="form-check-input") }}
+                        <label class="form-check-label">{{ form.post_utme_present.label.text }}</label>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="my-4">
+            <div class="mb-3">
+                <label class="form-label">{{ form.utme_subjects_json.label.text }}</label>
+                {{ form.utme_subjects_json(class="form-control font-monospace" + (" is-invalid" if form.utme_subjects_json.errors else ""), rows="5") }}
+                <div class="form-text">Example: {"English": 70, "Mathematics": 68, "Physics": 75, "Chemistry": 72}</div>
+                {% for error in form.utme_subjects_json.errors %}<div class="invalid-feedback d-block">{{ error }}</div>{% endfor %}
+            </div>
+
+            <hr class="my-4">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">O'Level Subject Entries</h6>
+                <button class="btn btn-sm btn-outline-primary" type="button" id="addOlevelRowBtn">Add Row</button>
+            </div>
+            <div class="table-responsive mb-3">
+                <table class="table table-sm align-middle" id="olevelTable">
+                    <thead>
+                        <tr>
+                            <th>Exam Body</th>
+                            <th>Exam Number</th>
+                            <th>Year</th>
+                            <th>Sitting</th>
+                            <th>Subject</th>
+                            <th>Grade</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            {{ form.olevel_results_json(class="form-control d-none", id="olevelResultsJson") }}
+            {% for error in form.olevel_results_json.errors %}<div class="text-danger small">{{ error }}</div>{% endfor %}
+
+            <div class="d-flex justify-content-end">
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(() => {
+    const form = document.getElementById('candidateForm');
+    const jambField = document.getElementById('jambRegField');
+    const jambFeedback = document.getElementById('jambRegFeedback');
+    const tableBody = document.querySelector('#olevelTable tbody');
+    const addRowBtn = document.getElementById('addOlevelRowBtn');
+    const olevelJsonField = document.getElementById('olevelResultsJson');
+
+    const createRow = (initial = {}) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>
+                <select class="form-select form-select-sm" data-key="exam_body">
+                    <option value="WAEC">WAEC</option>
+                    <option value="NECO">NECO</option>
+                    <option value="NABTEB">NABTEB</option>
+                </select>
+            </td>
+            <td><input class="form-control form-control-sm" data-key="exam_number"></td>
+            <td><input class="form-control form-control-sm" type="number" data-key="exam_year"></td>
+            <td>
+                <select class="form-select form-select-sm" data-key="sitting_number">
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                </select>
+            </td>
+            <td><input class="form-control form-control-sm" data-key="subject"></td>
+            <td><input class="form-control form-control-sm" data-key="grade"></td>
+            <td><button type="button" class="btn btn-sm btn-outline-danger" data-action="remove">x</button></td>
+        `;
+        Object.entries(initial).forEach(([key, value]) => {
+            const input = tr.querySelector(`[data-key="${key}"]`);
+            if (input) input.value = value ?? '';
+        });
+        tableBody.appendChild(tr);
+    };
+
+    const parseInitialRows = () => {
+        try {
+            const value = olevelJsonField.value?.trim();
+            if (!value) return;
+            const rows = JSON.parse(value);
+            if (Array.isArray(rows) && rows.length) {
+                rows.forEach((row) => createRow(row));
+                return;
+            }
+        } catch (_) {}
+        createRow();
+    };
+
+    addRowBtn?.addEventListener('click', () => createRow());
+    tableBody?.addEventListener('click', (event) => {
+        if (event.target?.dataset?.action === 'remove') {
+            event.target.closest('tr')?.remove();
+        }
+    });
+
+    form?.addEventListener('submit', () => {
+        const rows = Array.from(tableBody.querySelectorAll('tr')).map((row) => {
+            const obj = {};
+            row.querySelectorAll('[data-key]').forEach((input) => {
+                obj[input.dataset.key] = input.value;
+            });
+            return obj;
+        }).filter((row) => row.subject && row.grade);
+        olevelJsonField.value = JSON.stringify(rows);
+    });
+
+    let timer = null;
+    jambField?.addEventListener('input', () => {
+        clearTimeout(timer);
+        timer = setTimeout(async () => {
+            const value = jambField.value.trim();
+            if (!value) {
+                jambFeedback.textContent = '';
+                return;
+            }
+            try {
+                const response = await fetch(`{{ url_for('admin.validate_jamb_reg') }}?jamb_reg_number=${encodeURIComponent(value)}`);
+                const data = await response.json();
+                jambFeedback.textContent = data.message || '';
+                jambFeedback.className = `small mt-1 ${data.valid ? 'text-success' : 'text-danger'}`;
+            } catch (_) {
+                jambFeedback.textContent = '';
+            }
+        }, 350);
+    });
+
+    parseInitialRows();
+})();
+</script>
+{% endblock %}

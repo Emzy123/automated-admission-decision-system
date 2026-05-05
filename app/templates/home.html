@@ -1,0 +1,390 @@
+{% extends "base_public.html" %}
+
+{% block title %}CUSTECH Admission System - Home{% endblock %}
+
+{% block content %}
+
+<!-- 1. Hero Section -->
+<section class="hero-section" id="hero">
+    <div class="container">
+        <div class="hero-content" data-aos="fade-up">
+            <h1 class="hero-title">Confluence University of Science and Technology, Osara</h1>
+            <h2 class="hero-subtitle">Automated Rule-Based Admission Decision System</h2>
+            <p class="hero-desc">
+                Streamlining the admission process with intelligent, transparent, and merit-based automated screening for the {{ global_active_session.name if global_active_session else "2025/2026" }} academic session.
+            </p>
+            <div class="d-flex flex-column flex-sm-row justify-content-center gap-3">
+                <button class="btn btn-primary-custom btn-lg" data-bs-toggle="modal" data-bs-target="#loginModal">
+                    <i class="fa-solid fa-right-to-bracket me-2"></i>Sign In to Portal
+                </button>
+                <a href="#features" class="btn btn-outline-custom btn-lg">
+                    <i class="fa-solid fa-circle-info me-2"></i>Learn More
+                </a>
+            </div>
+            <div class="accreditation-text mt-4">
+                <i class="fa-solid fa-certificate me-2"></i>Accredited by NUC | Approved by JAMB
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 2. Statistics Counter -->
+<section class="stats-section" id="stats">
+    <div class="container">
+        <div class="row g-0 justify-content-center">
+            <div class="col-6 col-lg-3 stat-item" data-aos="fade-up" data-aos-delay="100">
+                <div class="stat-icon"><i class="fa-solid fa-book-open"></i></div>
+                <div class="stat-number" id="count-programmes">0</div>
+                <div class="stat-label">Total Programmes</div>
+                <div class="stat-desc">Across {{ faculties_count }} Faculties</div>
+            </div>
+            
+            <div class="col-6 col-lg-3 stat-item" data-aos="fade-up" data-aos-delay="200">
+                <div class="stat-icon"><i class="fa-solid fa-users"></i></div>
+                <div class="stat-number" id="count-candidates">0</div>
+                <div class="stat-label">Candidates Processed</div>
+                <div class="stat-desc">For {{ global_active_session.name if global_active_session else "2025/2026" }} Session</div>
+            </div>
+            
+            <div class="col-6 col-lg-3 stat-item" data-aos="fade-up" data-aos-delay="300">
+                <div class="stat-icon"><i class="fa-solid fa-scale-balanced"></i></div>
+                <div class="stat-number" id="count-quotas">0</div>
+                <div class="stat-label">Admission Categories</div>
+                <div class="stat-desc">Merit, Catchment & ELDS</div>
+            </div>
+            
+            <div class="col-6 col-lg-3 stat-item" data-aos="fade-up" data-aos-delay="400">
+                <div class="stat-icon"><i class="fa-solid fa-server"></i></div>
+                <div class="stat-number"><span id="count-uptime">0</span>%</div>
+                <div class="stat-label">System Uptime</div>
+                <div class="stat-desc">Reliable & Secure</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 3. Features Section -->
+<section class="features-section" id="features">
+    <div class="container">
+        <h2 class="section-title" data-aos="fade-up">Why Our Admission System?</h2>
+        <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100">
+            Designed to ensure fairness, transparency, and efficiency in the admission process
+        </p>
+        
+        <div class="row g-4">
+            <!-- Card 1 -->
+            <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="100">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fa-solid fa-robot"></i></div>
+                    <h4>Rule-Based Automated Screening</h4>
+                    <p>Our intelligent inference engine evaluates candidates against predefined admission rules including UTME scores, O'Level results, subject combinations, and quota requirements - eliminating human error and bias.</p>
+                    <ul class="feature-list">
+                        <li><i class="fa-solid fa-check"></i> Instant candidate evaluation</li>
+                        <li><i class="fa-solid fa-check"></i> Consistent rule application</li>
+                        <li><i class="fa-solid fa-check"></i> Complete reasoning trace</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Card 2 -->
+            <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="200">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fa-solid fa-scale-unbalanced"></i></div>
+                    <h4>JAMB-Compliant Quota System</h4>
+                    <p>Full implementation of the federal quota system with Merit (45%), Catchment (35%), and Educationally Less Developed States - ELDS (20%) categories, ensuring equitable access to higher education.</p>
+                    <ul class="feature-list">
+                        <li><i class="fa-solid fa-check"></i> Merit-based ranking</li>
+                        <li><i class="fa-solid fa-check"></i> Automatic catchment classification</li>
+                        <li><i class="fa-solid fa-check"></i> ELDS consideration built-in</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Card 3 -->
+            <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="300">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fa-solid fa-chart-pie"></i></div>
+                    <h4>Comprehensive Analytics Dashboard</h4>
+                    <p>Monitor admission progress with real-time statistics, quota distribution charts, rejection reason analysis, and state-of-origin demographics - all exportable for Senate reporting.</p>
+                    <ul class="feature-list">
+                        <li><i class="fa-solid fa-check"></i> Interactive charts and graphs</li>
+                        <li><i class="fa-solid fa-check"></i> Export to Excel and PDF</li>
+                        <li><i class="fa-solid fa-check"></i> Audit trail for every decision</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Card 4 -->
+            <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="400">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fa-solid fa-file-csv"></i></div>
+                    <h4>JAMB Format CSV Import</h4>
+                    <p>Seamlessly import candidate data directly from JAMB CAPS in the standard CSV format. Automatic format detection, validation, and mapping to system database with error reporting.</p>
+                    <ul class="feature-list">
+                        <li><i class="fa-solid fa-check"></i> Drag-and-drop file upload</li>
+                        <li><i class="fa-solid fa-check"></i> Automatic format recognition</li>
+                        <li><i class="fa-solid fa-check"></i> Duplicate detection and handling</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Card 5 -->
+            <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="500">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fa-solid fa-file-contract"></i></div>
+                    <h4>Automated Admission Letters</h4>
+                    <p>Generate professional provisional admission letters in PDF format for all admitted candidates with a single click. Bulk generation for entire programmes available.</p>
+                    <ul class="feature-list">
+                        <li><i class="fa-solid fa-check"></i> Professional letterhead design</li>
+                        <li><i class="fa-solid fa-check"></i> JAMB reference number included</li>
+                        <li><i class="fa-solid fa-check"></i> Batch download as ZIP archive</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Card 6 -->
+            <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="600">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                    <h4>Role-Based Access Control</h4>
+                    <p>Multi-level user permissions ensure that only authorized personnel can view, modify, or approve admission decisions. Complete audit logging for accountability.</p>
+                    <ul class="feature-list">
+                        <li><i class="fa-solid fa-check"></i> Admin, Officer, Reviewer roles</li>
+                        <li><i class="fa-solid fa-check"></i> Complete audit trail</li>
+                        <li><i class="fa-solid fa-check"></i> Session security</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 4. How It Works Section -->
+<section class="how-it-works-section" id="how-it-works">
+    <div class="container">
+        <h2 class="section-title" data-aos="fade-up">How the Admission Process Works</h2>
+        <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100">
+            From candidate upload to admission letter in four simple steps
+        </p>
+        
+        <div class="row mt-5">
+            <div class="col-lg-3 col-md-6 mb-4 mb-lg-0" data-aos="fade-right" data-aos-delay="100">
+                <div class="step-card">
+                    <div class="step-number">01</div>
+                    <div class="step-icon-container"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                    <h5>Upload Candidate Data</h5>
+                    <p>Import JAMB-format CSV files containing candidate UTME scores, O'Level results, and personal information.</p>
+                    <div class="step-small">Supports CAPS Format</div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6 mb-4 mb-lg-0" data-aos="fade-right" data-aos-delay="300">
+                <div class="step-card">
+                    <div class="step-number">02</div>
+                    <div class="step-icon-container"><i class="fa-solid fa-sliders"></i></div>
+                    <h5>Configure Rules</h5>
+                    <p>Set departmental cut-off marks, quota allocations, required subject combinations, and formulas.</p>
+                    <div class="step-small">One-time Setup</div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6 mb-4 mb-md-0" data-aos="fade-right" data-aos-delay="500">
+                <div class="step-card">
+                    <div class="step-number">03</div>
+                    <div class="step-icon-container"><i class="fa-solid fa-microchip"></i></div>
+                    <h5>Automated Screening</h5>
+                    <p>The inference engine evaluates every candidate against all criteria simultaneously, producing decisions.</p>
+                    <div class="step-small">Processes Thousands</div>
+                </div>
+            </div>
+            
+            <div class="col-lg-3 col-md-6" data-aos="fade-right" data-aos-delay="700">
+                <div class="step-card">
+                    <div class="step-number">04</div>
+                    <div class="step-icon-container"><i class="fa-solid fa-clipboard-check"></i></div>
+                    <h5>Generate Lists & Letters</h5>
+                    <p>System ranks candidates within quotas, applies limits, and generates letters for successful candidates.</p>
+                    <div class="step-small">Ready for Senate</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 5. Programmes Showcase Section -->
+<section class="programmes-section" id="programmes">
+    <div class="container">
+        <h2 class="section-title" data-aos="fade-up">Available Programmes</h2>
+        <p class="section-subtitle" data-aos="fade-up" data-aos-delay="100">
+            Offering {{ programmes_count }} programmes across {{ faculties_count }} faculties
+        </p>
+        
+        <div class="row g-4 justify-content-center">
+            <!-- Faculty 1 -->
+            <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="100">
+                <div class="faculty-card">
+                    <div class="faculty-header">
+                        <div class="faculty-icon"><i class="fa-solid fa-laptop-code"></i></div>
+                        <h4 class="faculty-title">Computing & Informatics</h4>
+                    </div>
+                    <div class="faculty-progs">
+                        Software Engineering, Computer Science, Cyber Security, Information Technology
+                    </div>
+                    <div class="faculty-highlight">Cutting-edge tech programmes</div>
+                </div>
+            </div>
+            
+            <!-- Faculty 2 -->
+            <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="200">
+                <div class="faculty-card">
+                    <div class="faculty-header">
+                        <div class="faculty-icon"><i class="fa-solid fa-gears"></i></div>
+                        <h4 class="faculty-title">Engineering</h4>
+                    </div>
+                    <div class="faculty-progs">
+                        Mechanical, Electrical, Civil, Chemical, Computer, Petroleum & Gas, Mechatronics, Marine, Materials, Agricultural
+                    </div>
+                    <div class="faculty-highlight">10 engineering disciplines</div>
+                </div>
+            </div>
+            
+            <!-- Faculty 3 -->
+            <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="300">
+                <div class="faculty-card">
+                    <div class="faculty-header">
+                        <div class="faculty-icon"><i class="fa-solid fa-flask"></i></div>
+                        <h4 class="faculty-title">Science</h4>
+                    </div>
+                    <div class="faculty-progs">
+                        Biology, Biochemistry, Chemistry, Mathematics, Microbiology, Physics, Statistics
+                    </div>
+                    <div class="faculty-highlight">Foundation for research</div>
+                </div>
+            </div>
+            
+            <!-- Faculty 4 -->
+            <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="400">
+                <div class="faculty-card">
+                    <div class="faculty-header">
+                        <div class="faculty-icon"><i class="fa-solid fa-building"></i></div>
+                        <h4 class="faculty-title">Environmental Sciences</h4>
+                    </div>
+                    <div class="faculty-progs">
+                        Architecture, Building, Geography, Surveying, Urban Planning
+                    </div>
+                    <div class="faculty-highlight">Shaping environments</div>
+                </div>
+            </div>
+            
+            <!-- Faculty 5 -->
+            <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="500">
+                <div class="faculty-card">
+                    <div class="faculty-header">
+                        <div class="faculty-icon"><i class="fa-solid fa-chalkboard-user"></i></div>
+                        <h4 class="faculty-title">Science & Tech Education</h4>
+                    </div>
+                    <div class="faculty-progs">
+                        Biology Ed., Chemistry Ed., Math Ed., Physics Ed., Computer Ed., Geography Ed., Technology Ed.
+                    </div>
+                    <div class="faculty-highlight">Training educators</div>
+                </div>
+            </div>
+            
+            <!-- Faculty 6 -->
+            <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="600">
+                <div class="faculty-card">
+                    <div class="faculty-header">
+                        <div class="faculty-icon"><i class="fa-solid fa-chart-line"></i></div>
+                        <h4 class="faculty-title">Management & Social Sci.</h4>
+                    </div>
+                    <div class="faculty-progs">
+                        Accounting, Actuarial Science, Business Admin, Economics, HRM, Transport & Logistics
+                    </div>
+                    <div class="faculty-highlight">Building business leaders</div>
+                </div>
+            </div>
+            
+            <!-- Faculty 7 -->
+            <div class="col-lg-4 col-md-6" data-aos="fade-up" data-aos-delay="700">
+                <div class="faculty-card">
+                    <div class="faculty-header">
+                        <div class="faculty-icon"><i class="fa-solid fa-scale-balanced"></i></div>
+                        <h4 class="faculty-title">Law</h4>
+                    </div>
+                    <div class="faculty-progs">
+                        Law (LL.B)
+                    </div>
+                    <div class="faculty-highlight">Pursuing legal excellence</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- 6. Trust Section -->
+<section class="trust-section">
+    <div class="container">
+        <h3 class="trust-title">Trusted by Academic Institutions</h3>
+        <div class="trust-logos">
+            <div class="trust-item"><i class="fa-solid fa-building-columns"></i> Compliant with NUC Guidelines</div>
+            <div class="trust-item"><i class="fa-solid fa-landmark"></i> Implements FCC Quota Principles</div>
+            <div class="trust-item"><i class="fa-solid fa-graduation-cap"></i> Built for JAMB CAPS Integration</div>
+            <div class="trust-item"><i class="fa-solid fa-code"></i> Dept of Software Engineering, CUSTECH</div>
+        </div>
+    </div>
+</section>
+
+<!-- 7. CTA Section -->
+<section class="cta-section">
+    <div class="container" data-aos="zoom-in">
+        <h2 class="cta-title">Ready to Streamline Your Admission Process?</h2>
+        <p class="cta-desc">Log in to access the admin dashboard, upload candidate data, and begin automated screening.</p>
+        <button class="btn btn-primary-custom btn-lg px-5 py-3 fs-5" data-bs-toggle="modal" data-bs-target="#loginModal">
+            <i class="fa-solid fa-lock me-2"></i>Access Admission Portal
+        </button>
+        <div class="cta-auth-text">Authorized personnel only. Contact the Registrar's office for access.</div>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Initialize CountUp.js for stats counters
+        if (typeof countUp !== 'undefined') {
+            const options = {
+                duration: 2.5,
+                useEasing: true,
+                separator: ','
+            };
+            
+            // Only start counters when they come into view
+            const statsSection = document.getElementById('stats');
+            
+            if (statsSection && window.IntersectionObserver) {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            new countUp.CountUp('count-programmes', {{ programmes_count }}, options).start();
+                            new countUp.CountUp('count-candidates', {{ candidates_count }}, options).start();
+                            new countUp.CountUp('count-quotas', 3, options).start();
+                            new countUp.CountUp('count-uptime', 99.9, {duration: 2.5, decimalPlaces: 1}).start();
+                            
+                            observer.unobserve(entry.target);
+                        }
+                    });
+                }, { threshold: 0.5 });
+                
+                observer.observe(statsSection);
+            } else {
+                // Fallback for browsers without IntersectionObserver
+                new countUp.CountUp('count-programmes', {{ programmes_count }}, options).start();
+                new countUp.CountUp('count-candidates', {{ candidates_count }}, options).start();
+                new countUp.CountUp('count-quotas', 3, options).start();
+                new countUp.CountUp('count-uptime', 99.9, {duration: 2.5, decimalPlaces: 1}).start();
+            }
+        }
+    });
+</script>
+{% endblock %}

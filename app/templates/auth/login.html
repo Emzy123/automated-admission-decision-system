@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login - CUSTECH Government Academic Portal</title>
+    
+    <!-- Accessibility Meta Tags -->
+    <meta name="description" content="Official CUSTECH Government Academic Portal Login - Secure access to admission system">
+    <meta name="keywords" content="CUSTECH, login, government, academic, portal, admission">
+    <meta name="author" content="CUSTECH Administration">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <!-- Skip to Main Content for Screen Readers -->
+    <style>
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            background: var(--primary);
+            color: white;
+            padding: 8px;
+            text-decoration: none;
+            border-radius: 0 0 4px 0;
+            z-index: 10000;
+        }
+        .skip-link:focus {
+            top: 0;
+        }
+    </style>
+    
+    <!-- Local Bootstrap 5 CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    
+    <!-- Local Font Awesome 6 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fontawesome.min.css') }}">
+    
+    <!-- Government Academic Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/accessibility.css') }}">
+    
+    <style>
+        :root {
+            /* Government Academic Colors - WCAG Compliant */
+            --primary: #005a9c;
+            --primary-dark: #004170;
+            --primary-light: #1a73b8;
+            --success: #006600;
+            --danger: #b71c1c;
+            --warning: #e65100;
+            --info: #0277bd;
+            --light: #ffffff;
+            --dark: #000000;
+            --gray-50: #f8f9fa;
+            --gray-100: #e9ecef;
+            --gray-200: #dee2e6;
+            --gray-300: #ced4da;
+            --gray-400: #adb5bd;
+            --gray-500: #6c757d;
+            --gray-600: #495057;
+            --gray-700: #343a40;
+            --gray-800: #212529;
+            --gray-900: #000000;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--gray-50);
+            color: var(--gray-900);
+            font-size: 16px;
+            line-height: 1.5;
+            overflow-x: hidden;
+        }
+        
+        .login-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        
+        .login-left {
+            flex: 0 0 45%;
+            max-width: 500px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 3rem;
+            position: relative;
+            overflow: hidden;
+            border-bottom: 4px solid var(--warning);
+        }
+        
+        .login-left::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.1'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+            opacity: 0.3;
+        }
+        
+        .login-content {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            color: white;
+            max-width: 400px;
+        }
+        
+        .brand-logo {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 2rem;
+            font-size: 2rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .brand-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+            line-height: 1.2;
+            color: white;
+        }
+        
+        .brand-subtitle {
+            font-size: 1rem;
+            opacity: 0.9;
+            margin-bottom: 1rem;
+            line-height: 1.4;
+            color: white;
+        }
+        
+        .official-badge {
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 2px;
+            color: var(--warning);
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 4px 12px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .login-illustration {
+            margin-top: 3rem;
+            font-size: 8rem;
+            opacity: 0.2;
+            animation: float 3s ease-in-out infinite;
+        }
+        
+        .login-right {
+            flex: 1;
+            background: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 3rem;
+            min-height: 100vh;
+        }
+        
+        .login-form-container {
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+        
+        .login-header h2 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            color: var(--dark);
+            margin-bottom: 0.5rem;
+        }
+        
+        .login-header p {
+            color: #475569;
+            font-size: 0.95rem;
+        }
+        
+        .form-floating {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-control {
+            border: 2px solid var(--gray-300);
+            border-radius: 4px;
+            padding: 0.75rem;
+            font-size: 16px;
+            transition: all 0.2s ease;
+            height: auto;
+            background-color: var(--light);
+            color: var(--gray-900);
+        }
+        
+        .form-control:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 2px var(--primary);
+            outline: 3px solid var(--primary);
+            outline-offset: 2px;
+        }
+        
+        .form-control::placeholder {
+            color: var(--gray-500);
+            opacity: 1;
+        }
+        
+        .form-floating label {
+            color: #475569;
+            padding: 1rem;
+        }
+        
+        .form-floating .form-control:focus ~ label,
+        .form-floating .form-control:not(:placeholder-shown) ~ label {
+            color: var(--primary);
+            opacity: 1;
+        }
+        
+        .form-check {
+            margin-bottom: 1.5rem;
+        }
+        
+        .form-check-input {
+            border: 2px solid #e5e7eb;
+            border-radius: 6px;
+            width: 20px;
+            height: 20px;
+            margin-top: 0.25rem;
+        }
+        
+        .form-check-input:checked {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+        
+        .form-check-label {
+            color: #374151;
+            font-size: 0.9rem;
+            margin-left: 0.5rem;
+        }
+        
+        .btn-login {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border: none;
+            border-radius: 4px;
+            padding: 0.75rem 1.5rem;
+            font-size: 16px;
+            font-weight: 600;
+            color: white;
+            transition: all 0.2s ease;
+            width: 100%;
+            margin-bottom: 1.5rem;
+            min-height: 44px;
+            cursor: pointer;
+        }
+        
+        .btn-login:hover {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary) 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .btn-login:focus {
+            outline: 3px solid var(--primary);
+            outline-offset: 2px;
+        }
+        
+        .btn-login:active {
+            transform: translateY(0);
+        }
+        
+        .forgot-password {
+            text-align: center;
+        }
+        
+        .forgot-password a {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: color 0.3s ease;
+        }
+        
+        .forgot-password a:hover {
+            color: var(--primary-dark);
+        }
+        
+        .invalid-feedback {
+            color: var(--danger);
+            font-size: 14px;
+            margin-top: 0.5rem;
+            display: block;
+            font-weight: 600;
+        }
+        
+        .form-control.is-invalid {
+            border-color: var(--danger);
+            border-width: 3px;
+        }
+        
+        .form-control.is-invalid:focus {
+            outline-color: var(--danger);
+        }
+        
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+        
+        .login-footer {
+            background: var(--gray-100);
+            border-top: 1px solid var(--gray-300);
+            padding: 1rem 0;
+            margin-top: auto;
+        }
+        
+        .login-footer .footer-link {
+            color: var(--primary);
+            text-decoration: none;
+            font-size: 14px;
+        }
+        
+        .login-footer .footer-link:hover {
+            color: var(--primary-dark);
+            text-decoration: underline;
+        }
+        
+        .help-text {
+            font-size: 14px;
+            color: var(--gray-600);
+            margin-top: 4px;
+            display: block;
+        }
+        
+        @media (max-width: 768px) {
+            .login-container {
+                flex-direction: column;
+            }
+            
+            .login-left {
+                min-height: 40vh;
+                padding: 2rem;
+            }
+            
+            .brand-title {
+                font-size: 2rem;
+            }
+            
+            .login-right {
+                padding: 2rem;
+            }
+            
+            .login-illustration {
+                font-size: 4rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<!-- Skip to Main Content for Accessibility -->
+<a href="#login-form" class="skip-link">Skip to login form</a>
+
+    <div class="login-container">
+        <!-- Left Side - Government Branding -->
+        <div class="login-left">
+            <div class="login-content">
+                <div class="brand-logo">
+                    <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                </div>
+                <div class="official-badge">OFFICIAL GOVERNMENT PORTAL</div>
+                <h1 class="brand-title">CUSTECH</h1>
+                <p class="brand-subtitle">Confluence University of Science and Technology<br>Government Academic Portal<br>Federal Ministry of Education</p>
+                <div class="login-illustration">
+                    <i class="fa-solid fa-user-graduate" aria-hidden="true"></i>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Right Side - Login Form -->
+        <div class="login-right">
+            <div class="login-form-container" id="login-form">
+                <div class="login-header">
+                    <h2>Secure Login</h2>
+                    <p>Access the official CUSTECH Government Academic Portal</p>
+                </div>
+                
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        {% for category, message in messages %}
+                            {% set alert_class = 'danger' if category == 'error' else category %}
+                            <div class="alert alert-{{ alert_class }} alert-dismissible fade show" role="alert">
+                                {{ message }}
+                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                            </div>
+                        {% endfor %}
+                    {% endif %}
+                {% endwith %}
+                
+                <form method="post" novalidate>
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="form-floating">
+                        {{ form.username(class="form-control" + (" is-invalid" if form.username.errors else ""), placeholder=" ") }}
+                        <label for="username">Username</label>
+                        {% for error in form.username.errors %}
+                            <div class="invalid-feedback" role="alert">{{ error }}</div>
+                        {% endfor %}
+                        <div id="username-help" class="help-text">Enter your official CUSTECH username</div>
+                    </div>
+                    
+                    <div class="form-floating">
+                        {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), placeholder=" ") }}
+                        <label for="password">Password</label>
+                        {% for error in form.password.errors %}
+                            <div class="invalid-feedback" role="alert">{{ error }}</div>
+                        {% endfor %}
+                        <div id="password-help" class="help-text">Enter your secure password</div>
+                    </div>
+                    
+                    <div class="form-check">
+                        {{ form.remember_me(class="form-check-input", id="remember") }}
+                        <label class="form-check-label" for="remember">
+                            Remember my session
+                        </label>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-login" aria-label="Sign in to government portal">
+                        <i class="fa-solid fa-sign-in-alt me-2" aria-hidden="true"></i>
+                        Sign In to Government Portal
+                    </button>
+                </form>
+                
+                <div class="forgot-password">
+                    <a href="#" onclick="alert('Password reset functionality coming soon. Please contact your administrator.')" aria-label="Get password reset help">
+                        <i class="fa-solid fa-key me-1" aria-hidden="true"></i>
+                        Forgot your password?
+                    </a>
+                </div>
+                
+                <div class="accessibility-info mt-3">
+                    <small class="text-muted">
+                        <i class="fa-solid fa-universal-access me-1" aria-hidden="true"></i>
+                        This portal is WCAG 2.1 AA compliant for accessibility
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer with Government Links -->
+    <footer class="login-footer" role="contentinfo">
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-12 text-center">
+                    <small class="text-muted">
+                        &copy; 2024 CUSTECH Admission System - Official Government Portal | 
+                        <a href="#" class="footer-link">Privacy Policy</a> | 
+                        <a href="#" class="footer-link">Accessibility Statement</a> | 
+                        <a href="#" class="footer-link">Terms of Service</a>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </footer>
+    
+    <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+    <script>
+        // Accessibility enhancements
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add keyboard navigation support
+            document.body.addEventListener('keydown', function(e) {
+                if (e.key === 'Tab') {
+                    document.body.classList.add('keyboard-nav');
+                }
+            });
+            
+            document.body.addEventListener('mousedown', function() {
+                document.body.classList.remove('keyboard-nav');
+            });
+            
+            // Focus management
+            const form = document.querySelector('form');
+            if (form) {
+                const firstInput = form.querySelector('input[type="text"]');
+                if (firstInput) {
+                    firstInput.focus();
+                }
+            }
+        });
+    </script>
+</body>
+</html>

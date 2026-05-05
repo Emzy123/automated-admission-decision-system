@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Programme Rules{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.programmes') }}">Programmes</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Rules - {{ programme.code }}</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h4 mb-1">Admission Rules - {{ programme.name }}</h1>
+        <p class="text-muted mb-0">Build dynamic IF-THEN admission logic for this programme.</p>
+    </div>
+    <a href="{{ url_for('admin.add_rule', programme_id=programme.id) }}" class="btn btn-outline-primary">
+        <i class="fa-solid fa-plus me-1"></i>Add Rule (Advanced Page)
+    </a>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-5">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Add Rule</h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {{ form.hidden_tag() }}
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.rule_name.label.text }}</label>
+                        {{ form.rule_name(class="form-control" + (" is-invalid" if form.rule_name.errors else "")) }}
+                        {% for error in form.rule_name.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.condition_field.label.text }}</label>
+                        {{ form.condition_field(class="form-select" + (" is-invalid" if form.condition_field.errors else "")) }}
+                        {% for error in form.condition_field.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.operator.label.text }}</label>
+                        {{ form.operator(class="form-select" + (" is-invalid" if form.operator.errors else "")) }}
+                        {% for error in form.operator.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.value.label.text }}</label>
+                        {{ form.value(class="form-control" + (" is-invalid" if form.value.errors else "")) }}
+                        {% for error in form.value.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                    </div>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label">{{ form.logic_group.label.text }}</label>
+                            {{ form.logic_group(class="form-select" + (" is-invalid" if form.logic_group.errors else "")) }}
+                            {% for error in form.logic_group.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label">{{ form.priority.label.text }}</label>
+                            {{ form.priority(class="form-control" + (" is-invalid" if form.priority.errors else "")) }}
+                            {% for error in form.priority.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                        </div>
+                    </div>
+                    <div class="form-check mt-3">
+                        {{ form.is_active(class="form-check-input") }}
+                        <label class="form-check-label">{{ form.is_active.label.text }}</label>
+                    </div>
+                    <div class="mt-3">{{ form.submit(class="btn btn-primary") }}</div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Existing Rules</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Priority</th>
+                                <th>Rule</th>
+                                <th>Condition</th>
+                                <th>Status</th>
+                                <th class="text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if rules %}
+                                {% for rule in rules %}
+                                    <tr>
+                                        <td>{{ rule.priority }}</td>
+                                        <td>
+                                            <div class="fw-semibold">{{ rule.rule_name }}</div>
+                                            <small class="text-muted">Logic Group: {{ rule.logic_group }}</small>
+                                        </td>
+                                        <td><code>{{ rule.condition_field }} {{ rule.operator }} {{ rule.value }}</code></td>
+                                        <td>
+                                            <span class="badge {{ 'bg-success' if rule.is_active else 'bg-secondary' }}">
+                                                {{ "Active" if rule.is_active else "Disabled" }}
+                                            </span>
+                                        </td>
+                                        <td class="text-end">
+                                            <form method="post" action="{{ url_for('admin.toggle_rule', id=rule.id) }}" class="d-inline">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <button class="btn btn-sm btn-outline-primary" type="submit">
+                                                    {{ "Disable" if rule.is_active else "Enable" }}
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">No admission rules configured yet.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

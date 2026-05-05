@@ -1,0 +1,169 @@
+{% extends "base.html" %}
+{% block title %}Candidate Details{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.candidates') }}">Candidates</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ candidate.jamb_reg_number }}</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h4 mb-1">{{ candidate.full_name }}</h1>
+        <p class="text-muted mb-0">{{ candidate.jamb_reg_number }}</p>
+    </div>
+    <div class="d-flex gap-2 align-items-center">
+        <a href="{{ url_for('admin.edit_candidate', id=candidate.id) }}" class="btn btn-outline-primary btn-sm">
+            <i class="fa-solid fa-pen me-1"></i>Edit
+        </a>
+        {% if candidate.caps_verified %}
+            <span class="badge bg-success px-3 py-2 fs-6">
+                <i class="fa-solid fa-circle-check me-1"></i>CAPS Verified
+            </span>
+        {% else %}
+            <form method="post" action="{{ url_for('admin.verify_candidate', id=candidate.id) }}" class="d-inline">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button class="btn btn-success btn-sm" type="submit"
+                        onclick="return confirm('Mark {{ candidate.full_name }} as CAPS Verified?')">
+                    <i class="fa-solid fa-shield-check me-1"></i>Mark as Verified
+                </button>
+            </form>
+        {% endif %}
+        <a href="{{ url_for('admission.screening_dashboard') }}" class="btn btn-outline-secondary btn-sm">
+            <i class="fa-solid fa-play me-1"></i>Screen
+        </a>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-lg-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-header bg-white"><h5 class="mb-0">Profile</h5></div>
+            <div class="card-body">
+                <dl class="row mb-0 small">
+                    <dt class="col-5">Email</dt><dd class="col-7">{{ candidate.email or '-' }}</dd>
+                    <dt class="col-5">Phone</dt><dd class="col-7">{{ candidate.phone or '-' }}</dd>
+                    <dt class="col-5">Gender</dt><dd class="col-7">{{ candidate.gender or '-' }}</dd>
+                    <dt class="col-5">DOB</dt><dd class="col-7">{{ candidate.date_of_birth or '-' }}</dd>
+                    <dt class="col-5">State</dt><dd class="col-7">{{ candidate.state_of_origin or '-' }}</dd>
+                    <dt class="col-5">LGA</dt><dd class="col-7">{{ candidate.lga_of_origin or '-' }}</dd>
+                    <dt class="col-5">Session</dt><dd class="col-7">{{ candidate.session.name if candidate.session else '-' }}</dd>
+                    <dt class="col-5">Programme</dt><dd class="col-7">{{ candidate.first_choice_programme.name if candidate.first_choice_programme else '-' }}</dd>
+                    <dt class="col-5">Status</dt><dd class="col-7"><span class="badge bg-secondary">{{ candidate.status|capitalize }}</span></dd>
+                    <dt class="col-5">CAPS</dt>
+                    <dd class="col-7">
+                        <span class="badge {{ 'bg-success' if candidate.caps_verified else 'bg-warning text-dark' }}">
+                            {{ 'Verified' if candidate.caps_verified else 'Pending' }}
+                        </span>
+                    </dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-8">
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white"><h5 class="mb-0">UTME Score Breakdown</h5></div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="border rounded p-3 bg-light">
+                            <div class="small text-muted">Total UTME</div>
+                            <div class="h4 mb-0">{{ candidate.utme_score }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-3 bg-light">
+                            <div class="small text-muted">Post-UTME</div>
+                            <div class="h4 mb-0">{{ candidate.post_utme_score if candidate.post_utme_score is not none else '-' }}</div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="border rounded p-3 bg-light">
+                            <div class="small text-muted">Subjects</div>
+                            <div class="small mb-0">
+                                {% for subject, score in (candidate.utme_subjects or {}).items() %}
+                                    <div>{{ subject }}: {{ score }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm mb-3">
+            <div class="card-header bg-white"><h5 class="mb-0">O'Level Results</h5></div>
+            <div class="card-body p-0">
+                {% if grouped_olevel %}
+                    {% for sitting, results in grouped_olevel.items() %}
+                        <div class="border-bottom p-3">
+                            <h6 class="mb-2">Sitting {{ sitting }}</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm align-middle mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Exam Body</th>
+                                            <th>Exam No</th>
+                                            <th>Year</th>
+                                            <th>Subject</th>
+                                            <th>Grade</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for result in results %}
+                                            <tr>
+                                                <td>{{ result.exam_body }}</td>
+                                                <td>{{ result.exam_number }}</td>
+                                                <td>{{ result.exam_year }}</td>
+                                                <td>{{ result.subject }}</td>
+                                                <td>{{ result.grade }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="p-4 text-center text-muted">No O'Level results recorded.</div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white"><h5 class="mb-0">Admission History</h5></div>
+            <div class="card-body p-0">
+                {% if candidate.admission_records %}
+                    <div class="table-responsive">
+                        <table class="table table-sm table-striped mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Programme</th>
+                                    <th>Aggregate</th>
+                                    <th>Quota</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for record in candidate.admission_records %}
+                                    <tr>
+                                        <td>{{ record.programme.code if record.programme else '-' }}</td>
+                                        <td>{{ record.aggregate_score }}</td>
+                                        <td>{{ record.quota_category or '-' }}</td>
+                                        <td><span class="badge bg-secondary">{{ record.status|capitalize }}</span></td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <div class="p-4 text-center text-muted">No admission records yet.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

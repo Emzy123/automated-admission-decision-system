@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{% block title %}CUSTECH Admission Decision System{% endblock %}</title>
+    
+    <!-- Accessibility & SEO Meta Tags -->
+    <meta name="description" content="Official CUSTECH Admission System - Streamlining the admission process with intelligent, transparent, and merit-based automated screening for the 2025/2026 academic session.">
+    <meta name="keywords" content="CUSTECH, admission, Osara, Nigeria, automated screening, CAPS, JAMB">
+    <meta name="author" content="CUSTECH Administration">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <!-- Google Fonts - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome 6 -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    
+    <!-- AOS Animation CSS -->
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
+    <!-- Landing Page Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/landing.css') }}">
+    
+    {% block styles %}{% endblock %}
+</head>
+<body>
+
+    <!-- Main Navigation -->
+    <nav class="navbar navbar-expand-lg fixed-top" id="mainNav">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
+                <i class="fa-solid fa-graduation-cap fs-3"></i>
+                <span class="d-none d-sm-inline ms-2">CUSTECH Admissions</span>
+                <span class="d-inline d-sm-none ms-2">CUSTECH</span>
+            </a>
+            
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-toggle="target" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarResponsive">
+                <ul class="navbar-nav ms-auto my-2 my-lg-0 align-items-lg-center">
+                    <li class="nav-item"><a class="nav-link px-3" href="#hero">Home</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="#features">Features</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="#how-it-works">How It Works</a></li>
+                    <li class="nav-item"><a class="nav-link px-3" href="#programmes">Programmes</a></li>
+                    <li class="nav-item ms-lg-3 mt-3 mt-lg-0">
+                        <button class="btn btn-outline-custom w-100 w-lg-auto" data-bs-toggle="modal" data-bs-target="#loginModal">
+                            <i class="fa-solid fa-right-to-bracket me-2"></i>Sign In
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content Area -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer-section">
+        <div class="container">
+            <div class="row g-4 mb-5">
+                <!-- Column 1: About -->
+                <div class="col-lg-4 col-md-6">
+                    <a href="#" class="footer-brand">
+                        <i class="fa-solid fa-graduation-cap"></i> CUSTECH
+                    </a>
+                    <p class="mt-3 mb-4 pe-lg-4">
+                        Confluence University of Science and Technology, Osara - Automated Rule-Based Admission Decision System.
+                    </p>
+                    <p class="text-white-50 small mb-0">A B.Sc. Software Engineering Project</p>
+                </div>
+                
+                <!-- Column 2: Quick Links -->
+                <div class="col-lg-2 col-md-6">
+                    <h5 class="footer-heading">Quick Links</h5>
+                    <ul class="footer-links">
+                        <li><a href="#hero">Home</a></li>
+                        <li><a href="#" data-bs-toggle="modal" data-bs-target="#loginModal">Sign In</a></li>
+                        <li><a href="#programmes">Programmes</a></li>
+                        <li><a href="#features">Features</a></li>
+                    </ul>
+                </div>
+                
+                <!-- Column 3: Contact Info -->
+                <div class="col-lg-3 col-md-6">
+                    <h5 class="footer-heading">Contact</h5>
+                    <ul class="footer-links footer-contact">
+                        <li>
+                            <i class="fa-solid fa-location-dot"></i>
+                            <span>Osara, Kogi State, Nigeria</span>
+                        </li>
+                        <li>
+                            <i class="fa-solid fa-envelope"></i>
+                            <span>admissions@custech.edu.ng</span>
+                        </li>
+                        <li>
+                            <i class="fa-solid fa-phone"></i>
+                            <span>+234 (0) 800 000 0000</span>
+                        </li>
+                    </ul>
+                </div>
+                
+                <!-- Column 4: Technical -->
+                <div class="col-lg-3 col-md-6">
+                    <h5 class="footer-heading">Project Credits</h5>
+                    <ul class="footer-links text-white-50 small">
+                        <li>Developed by: Emmanuel Onucheojo Ocheme</li>
+                        <li>Matric: 22L1SE0086</li>
+                        <li>Department of Software Engineering</li>
+                        <li>Faculty of Computing and Informatics</li>
+                        <li>Supervisor: Dr. A.A. Alfa</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bottom Bar -->
+        <div class="footer-bottom">
+            <div class="container">
+                <div class="row align-items-center">
+                    <div class="col-md-6 text-center text-md-start mb-3 mb-md-0">
+                        <p>&copy; 2025 Confluence University of Science and Technology, Osara. All rights reserved.</p>
+                    </div>
+                    <div class="col-md-6 text-center text-md-end text-white-50">
+                        <p class="small mb-0">Built with Flask & Bootstrap 5</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Login Modal -->
+    <div class="modal fade" id="loginModal" tabindex="-1" aria-labelledby="loginModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 12px; overflow: hidden;">
+                <div class="modal-header bg-primary text-white border-0 py-3">
+                    <h5 class="modal-title fw-bold" id="loginModalLabel">
+                        <i class="fa-solid fa-lock me-2"></i>Sign In
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Flash Messages -->
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            {% for category, message in messages %}
+                                <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                                    {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                                </div>
+                            {% endfor %}
+                        {% endif %}
+                    {% endwith %}
+                    
+                    <form method="POST" action="{{ url_for('index') }}">
+                        {% if form %}
+                            {{ form.hidden_tag() }}
+                            <div class="mb-3">
+                                <label for="username" class="form-label fw-semibold text-secondary small text-uppercase">Username or JAMB Reg Number</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0 text-muted"><i class="fa-solid fa-user"></i></span>
+                                    {{ form.username(class="form-control border-start-0 ps-0 bg-light", placeholder="Enter your username") }}
+                                </div>
+                            </div>
+                            <div class="mb-4">
+                                <label for="password" class="form-label fw-semibold text-secondary small text-uppercase">Password</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light border-end-0 text-muted"><i class="fa-solid fa-key"></i></span>
+                                    {{ form.password(class="form-control border-start-0 ps-0 bg-light", placeholder="Enter your password") }}
+                                </div>
+                            </div>
+                            <div class="mb-4 d-flex justify-content-between align-items-center">
+                                <div class="form-check">
+                                    {{ form.remember_me(class="form-check-input") }}
+                                    <label class="form-check-label small text-muted" for="remember_me">
+                                        Remember me
+                                    </label>
+                                </div>
+                                <a href="#" class="small text-decoration-none">Forgot password?</a>
+                            </div>
+                            <button type="submit" class="btn btn-primary-custom w-100 py-2">
+                                Sign In <i class="fa-solid fa-arrow-right ms-2"></i>
+                            </button>
+                        {% endif %}
+                    </form>
+                </div>
+                <div class="modal-footer bg-light border-0 justify-content-center py-3">
+                    <p class="small text-muted mb-0">For issues with your account, please contact the IT Helpdesk.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- AOS Animation JS -->
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    
+    <!-- CountUp.js (Loaded via module in individual page or globally) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/countup.js/2.0.8/countUp.umd.js"></script>
+
+    <!-- Global Scripts -->
+    <script>
+        // Initialize AOS
+        AOS.init({
+            duration: 800,
+            easing: 'ease-in-out',
+            once: true,
+            offset: 100
+        });
+
+        // Navbar Scroll Effect
+        window.addEventListener('scroll', function() {
+            const navbar = document.getElementById('mainNav');
+            if (window.scrollY > 50) {
+                navbar.classList.add('scrolled');
+            } else {
+                navbar.classList.remove('scrolled');
+            }
+        });
+        
+        // Initial check in case page is loaded scrolled down
+        if (window.scrollY > 50) {
+            document.getElementById('mainNav').classList.add('scrolled');
+        }
+        
+        // Auto-open modal if there are flash messages
+        document.addEventListener('DOMContentLoaded', function() {
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    var myModal = new bootstrap.Modal(document.getElementById('loginModal'));
+                    myModal.show();
+                {% endif %}
+            {% endwith %}
+        });
+    </script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,217 @@
+<div class="table-responsive">
+    <!-- Search Bar -->
+    <div class="p-3 border-bottom">
+        <div class="row g-2 align-items-center">
+            <div class="col-md-6">
+                <input type="text" class="form-control form-control-sm" placeholder="Search by name or JAMB reg...">
+            </div>
+            <div class="col-md-3">
+                <select class="form-select form-select-sm">
+                    <option value="">All Status</option>
+                    <option value="admitted">🟢 Admitted</option>
+                    <option value="accepted">🔵 Accepted</option>
+                    <option value="waiting">🟠 Waiting List</option>
+                    <option value="declined">🔴 Declined</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-outline-primary btn-sm w-100" onclick="refreshTable()">
+                    <i class="fa-solid fa-sync-alt me-1"></i>Refresh
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Table -->
+    <table class="table table-hover merit-table mb-0">
+        <thead>
+            <tr>
+                <th width="60">Rank</th>
+                <th>JAMB Reg</th>
+                <th>Name</th>
+                <th>State</th>
+                <th>UTME</th>
+                <th>Post-UTME</th>
+                <th>Aggregate</th>
+                <th>Status</th>
+                <th width="80">Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% set current_quota = current_quota or 'merit' %}
+            {% set quota_data = quota_data or merit_data.merit %}
+            
+            <!-- Admitted Candidates -->
+            {% for candidate in quota_data.admitted %}
+                {% set row_class = 'row-declined' if candidate.status == 'declined' else ('quota-' ~ current_quota) %}
+                <tr class="{{ row_class }}">
+                    <td><strong>{{ candidate.rank }}</strong></td>
+                    <td><code>{{ candidate.jamb_reg }}</code></td>
+                    <td>
+                        <a href="{{ url_for('admin.candidate_detail', id=candidate.id) }}" 
+                           class="text-decoration-none">
+                            {{ candidate.name }}
+                        </a>
+                    </td>
+                    <td>{{ candidate.state }}</td>
+                    <td>{{ candidate.utme_score }}</td>
+                    <td>{{ candidate.post_utme_score or '-' }}</td>
+                    <td><strong>{{ candidate.aggregate }}</strong></td>
+                    <td>
+                        {% if candidate.status == 'accepted' %}
+                            <span class="badge bg-primary">✓ Accepted</span>
+                        {% elif candidate.status == 'declined' %}
+                            <span class="badge bg-danger">✗ Declined</span>
+                        {% else %}
+                            <span class="badge bg-success">Admitted</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{{ url_for('admin.candidate_detail', id=candidate.id) }}" 
+                               class="btn btn-outline-primary" title="View Profile">
+                                <i class="fa-solid fa-user"></i>
+                            </a>
+                            <a href="{{ url_for('admission.screening_result_detail', record_id=candidate.record_id) }}" 
+                               class="btn btn-outline-info" title="View Screening Result">
+                                <i class="fa-solid fa-chart-line"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            
+            <!-- Cutoff Line -->
+            {% if quota_data.waiting %}
+                <tr>
+                    <td colspan="9" class="p-0 position-relative">
+                        <hr class="cutoff-line">
+                        <span class="cutoff-label">CUTOFF: {{ quota_data.cutoff_score }}</span>
+                    </td>
+                </tr>
+            {% endif %}
+            
+            <!-- Waiting List -->
+            {% for candidate in quota_data.waiting %}
+                <tr class="table-light">
+                    <td>{{ candidate.rank }}</td>
+                    <td><code>{{ candidate.jamb_reg }}</code></td>
+                    <td>
+                        <a href="{{ url_for('admin.candidate_detail', id=candidate.id) }}" 
+                           class="text-decoration-none">
+                            {{ candidate.name }}
+                        </a>
+                    </td>
+                    <td>{{ candidate.state }}</td>
+                    <td>{{ candidate.utme_score }}</td>
+                    <td>{{ candidate.post_utme_score or '-' }}</td>
+                    <td>{{ candidate.aggregate }}</td>
+                    <td><span class="status-waiting">Waiting List</span></td>
+                    <td>
+                        <div class="btn-group btn-group-sm">
+                            <a href="{{ url_for('admin.candidate_detail', id=candidate.id) }}" 
+                               class="btn btn-outline-primary" title="View Profile">
+                                <i class="fa-solid fa-user"></i>
+                            </a>
+                            <a href="{{ url_for('admission.screening_result_detail', record_id=candidate.record_id) }}" 
+                               class="btn btn-outline-info" title="View Screening Result">
+                                <i class="fa-solid fa-chart-line"></i>
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+            {% endfor %}
+            
+            {% if not quota_data.admitted and not quota_data.waiting %}
+                <tr>
+                    <td colspan="9" class="text-center py-4">
+                        <div class="text-muted">
+                            <i class="fa-solid fa-users fa-2x mb-2"></i>
+                            <p class="mb-0">No candidates found for {{ current_quota|title }} quota</p>
+                        </div>
+                    </td>
+                </tr>
+            {% endif %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Summary Footer -->
+<div class="p-3 border-top bg-light">
+    <div class="row g-2 align-items-center">
+        <div class="col-md-3">
+            <small class="text-muted">
+                <strong>{{ quota_data.qualified_count }}</strong> qualified candidates
+            </small>
+        </div>
+        <div class="col-md-3">
+            <small class="text-muted">
+                <strong>{{ quota_data.admitted|length }}</strong> admitted ({{ quota_data.slot_limit }} slots)
+            </small>
+        </div>
+        <div class="col-md-3">
+            <small class="text-muted">
+                <strong>{{ quota_data.waiting|length }}</strong> on waiting list
+            </small>
+        </div>
+        <div class="col-md-3">
+            <small class="text-muted">
+                {% if quota_data.waiting_cutoff %}
+                    <strong>Waiting cutoff:</strong> {{ quota_data.waiting_cutoff }}
+                {% else %}
+                    <strong>No waiting list</strong>
+                {% endif %}
+            </small>
+        </div>
+    </div>
+</div>
+
+<script>
+function refreshTable() {
+    location.reload();
+}
+
+// Add sorting functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.querySelector('.merit-table');
+    if (!table) return;
+    
+    const headers = table.querySelectorAll('th');
+    headers.forEach((header, index) => {
+        if (index === 0 || index === 7) return; // Skip rank and status columns
+        
+        header.style.cursor = 'pointer';
+        header.addEventListener('click', function() {
+            sortTable(table, index);
+        });
+    });
+});
+
+function sortTable(table, columnIndex) {
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr:not(.table-light)'));
+    
+    const isAscending = table.getAttribute('data-sort-order') !== 'asc';
+    table.setAttribute('data-sort-order', isAscending ? 'asc' : 'desc');
+    
+    rows.sort((a, b) => {
+        const aValue = a.cells[columnIndex].textContent.trim();
+        const bValue = b.cells[columnIndex].textContent.trim();
+        
+        // Handle numeric sorting
+        if (!isNaN(aValue) && !isNaN(bValue)) {
+            return isAscending ? 
+                parseFloat(aValue) - parseFloat(bValue) :
+                parseFloat(bValue) - parseFloat(aValue);
+        }
+        
+        // Handle text sorting
+        return isAscending ? 
+            aValue.localeCompare(bValue) :
+            bValue.localeCompare(aValue);
+    });
+    
+    // Re-append sorted rows
+    rows.forEach(row => tbody.appendChild(row));
+}
+</script>

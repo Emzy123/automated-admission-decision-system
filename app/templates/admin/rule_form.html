@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Add Admission Rule{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.programmes') }}">Programmes</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Add Rule</li>
+    </ol>
+</nav>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Create Admission Rule</h5>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {{ form.hidden_tag() }}
+            <div class="mb-3">
+                <label class="form-label">Programme</label>
+                <select class="form-select" name="programme_id" required>
+                    <option value="">Select Programme</option>
+                    {% for programme in programmes %}
+                        <option value="{{ programme.id }}" {% if selected_programme_id == programme.id %}selected{% endif %}>
+                            {{ programme.name }} ({{ programme.code }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">{{ form.rule_name.label.text }}</label>
+                    {{ form.rule_name(class="form-control" + (" is-invalid" if form.rule_name.errors else "")) }}
+                    {% for error in form.rule_name.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ form.condition_field.label.text }}</label>
+                    {{ form.condition_field(class="form-select" + (" is-invalid" if form.condition_field.errors else "")) }}
+                    {% for error in form.condition_field.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ form.operator.label.text }}</label>
+                    {{ form.operator(class="form-select" + (" is-invalid" if form.operator.errors else "")) }}
+                    {% for error in form.operator.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">{{ form.value.label.text }}</label>
+                    {{ form.value(class="form-control" + (" is-invalid" if form.value.errors else "")) }}
+                    {% for error in form.value.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ form.logic_group.label.text }}</label>
+                    {{ form.logic_group(class="form-select" + (" is-invalid" if form.logic_group.errors else "")) }}
+                    {% for error in form.logic_group.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ form.priority.label.text }}</label>
+                    {{ form.priority(class="form-control" + (" is-invalid" if form.priority.errors else "")) }}
+                    {% for error in form.priority.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+            </div>
+
+            <div class="form-check mt-3">
+                {{ form.is_active(class="form-check-input") }}
+                <label class="form-check-label">{{ form.is_active.label.text }}</label>
+            </div>
+
+            <div class="mt-4">
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

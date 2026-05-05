@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}{{ "Add Programme" if mode == "create" else "Edit Programme" }}{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.programmes') }}">Programmes</a></li>
+        <li class="breadcrumb-item active" aria-current="page">{{ "Add" if mode == "create" else "Edit" }}</li>
+    </ol>
+</nav>
+
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">{{ "Create Programme" if mode == "create" else "Edit Programme" }}</h5>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {{ form.hidden_tag() }}
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">{{ form.name.label.text }}</label>
+                    {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+                    {% for error in form.name.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ form.code.label.text }}</label>
+                    {{ form.code(class="form-control" + (" is-invalid" if form.code.errors else "")) }}
+                    {% for error in form.code.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">{{ form.faculty_id.label.text }}</label>
+                    {{ form.faculty_id(class="form-select" + (" is-invalid" if form.faculty_id.errors else "")) }}
+                    {% for error in form.faculty_id.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+            </div>
+
+            <div class="row g-3 mt-1">
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.duration_years.label.text }}</label>
+                    {{ form.duration_years(class="form-control" + (" is-invalid" if form.duration_years.errors else "")) }}
+                    {% for error in form.duration_years.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.min_utme_score.label.text }}</label>
+                    {{ form.min_utme_score(class="form-control" + (" is-invalid" if form.min_utme_score.errors else "")) }}
+                    {% for error in form.min_utme_score.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.total_slots.label.text }}</label>
+                    {{ form.total_slots(class="form-control" + (" is-invalid" if form.total_slots.errors else "")) }}
+                    {% for error in form.total_slots.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+            </div>
+
+            <div class="row g-3 mt-1">
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.merit_slots.label.text }}</label>
+                    {{ form.merit_slots(class="form-control" + (" is-invalid" if form.merit_slots.errors else "")) }}
+                    {% for error in form.merit_slots.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.catchment_slots.label.text }}</label>
+                    {{ form.catchment_slots(class="form-control" + (" is-invalid" if form.catchment_slots.errors else "")) }}
+                    {% for error in form.catchment_slots.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.elds_slots.label.text }}</label>
+                    {{ form.elds_slots(class="form-control" + (" is-invalid" if form.elds_slots.errors else "")) }}
+                    {% for error in form.elds_slots.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+            </div>
+
+            <div class="row g-3 mt-1">
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.merit_cutoff.label.text }}</label>
+                    {{ form.merit_cutoff(class="form-control" + (" is-invalid" if form.merit_cutoff.errors else "")) }}
+                    {% for error in form.merit_cutoff.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.catchment_cutoff.label.text }}</label>
+                    {{ form.catchment_cutoff(class="form-control" + (" is-invalid" if form.catchment_cutoff.errors else "")) }}
+                    {% for error in form.catchment_cutoff.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">{{ form.elds_cutoff.label.text }}</label>
+                    {{ form.elds_cutoff(class="form-control" + (" is-invalid" if form.elds_cutoff.errors else "")) }}
+                    {% for error in form.elds_cutoff.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+            </div>
+
+            <div class="row g-3 mt-1">
+                <div class="col-md-6">
+                    <label class="form-label">{{ form.required_utme_subjects.label.text }}</label>
+                    {{ form.required_utme_subjects(class="form-select" + (" is-invalid" if form.required_utme_subjects.errors else ""), size="8") }}
+                    {% for error in form.required_utme_subjects.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">{{ form.mandatory_olevel_subjects.label.text }}</label>
+                    {{ form.mandatory_olevel_subjects(class="form-select" + (" is-invalid" if form.mandatory_olevel_subjects.errors else ""), size="8") }}
+                    {% for error in form.mandatory_olevel_subjects.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-end mt-4">
+                {{ form.submit(class="btn btn-primary") }}
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

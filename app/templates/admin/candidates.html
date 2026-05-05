@@ -1,0 +1,573 @@
+{% extends "base.html" %}
+{% block title %}Candidates{% endblock %}
+{% block content %}
+<style>
+    /* Maximum contrast overrides for candidates table */
+    body .candidates-page {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+    }
+    
+    /* Force all text to be black with maximum specificity */
+    body .candidates-page *,
+    body .candidates-page * *,
+    body .candidates-page * * *,
+    body .candidates-page div,
+    body .candidates-page span,
+    body .candidates-page p,
+    body .candidates-page h1,
+    body .candidates-page h2,
+    body .candidates-page h3,
+    body .candidates-page h4,
+    body .candidates-page h5,
+    body .candidates-page h6,
+    body .candidates-page td,
+    body .candidates-page th,
+    body .candidates-page label,
+    body .candidates-page input,
+    body .candidates-page select,
+    body .candidates-page textarea,
+    body .candidates-page code {
+        color: #000000 !important;
+    }
+    
+    /* Table headers with high contrast */
+    body .candidates-page .table th {
+        background-color: #f0f0f0 !important;
+        color: #000000 !important;
+        font-weight: 900 !important;
+        border: 2px solid #333333 !important;
+    }
+    
+    /* Table cells with high contrast */
+    body .candidates-page .table td {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border: 1px solid #666666 !important;
+        font-weight: 700 !important;
+    }
+    
+    /* Programme column specifically (now column 6) */
+    body .candidates-page .table td:nth-child(6) {
+        color: #000000 !important;
+        font-weight: 900 !important;
+        background-color: #ffffcc !important;
+    }
+    
+    /* Session column specifically (now column 7) */
+    body .candidates-page .table td:nth-child(7) {
+        color: #000000 !important;
+        font-weight: 900 !important;
+        background-color: #ccffcc !important;
+    }
+    
+    /* Status badges with maximum contrast */
+    body .candidates-page .badge {
+        font-weight: 900 !important;
+        border: 2px solid #000000 !important;
+    }
+    
+    body .candidates-page .badge.bg-secondary {
+        background-color: #666666 !important;
+        color: #ffffff !important;
+    }
+    
+    body .candidates-page .badge.bg-info {
+        background-color: #0066cc !important;
+        color: #ffffff !important;
+    }
+    
+    body .candidates-page .badge.bg-success {
+        background-color: #006600 !important;
+        color: #ffffff !important;
+    }
+    
+    body .candidates-page .badge.bg-danger {
+        background-color: #cc0000 !important;
+        color: #ffffff !important;
+    }
+    
+    body .candidates-page .badge.bg-warning {
+        background-color: #ff9900 !important;
+        color: #000000 !important;
+    }
+    
+    /* Form elements with high contrast */
+    body .candidates-page .form-control,
+    body .candidates-page .form-select {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border: 2px solid #000000 !important;
+        font-weight: 700 !important;
+    }
+    
+    /* Links with high contrast */
+    body .candidates-page a {
+        color: #0000cc !important;
+        font-weight: 900 !important;
+        text-decoration: underline !important;
+    }
+    
+    /* Code blocks */
+    body .candidates-page code {
+        background-color: #f0f0f0 !important;
+        color: #000000 !important;
+        border: 1px solid #000000 !important;
+        padding: 4px !important;
+        font-weight: 700 !important;
+    }
+    
+    /* Headers */
+    body .candidates-page h1,
+    body .candidates-page h2,
+    body .candidates-page h3,
+    body .candidates-page h4,
+    body .candidates-page h5 {
+        color: #000000 !important;
+        font-weight: 900 !important;
+        background-color: #ffffff !important;
+    }
+    
+    /* Card headers */
+    body .candidates-page .card-header {
+        background-color: #f0f0f0 !important;
+        color: #000000 !important;
+        border: 2px solid #000000 !important;
+    }
+    
+    /* Card bodies */
+    body .candidates-page .card-body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border: 1px solid #666666 !important;
+    }
+    
+    /* Buttons */
+    body .candidates-page .btn {
+        font-weight: 900 !important;
+        border: 2px solid #000000 !important;
+    }
+    
+    body .candidates-page .btn-primary {
+        background-color: #0066cc !important;
+        color: #ffffff !important;
+    }
+    
+    body .candidates-page .btn-outline-primary {
+        background-color: #ffffff !important;
+        color: #0066cc !important;
+        border-color: #0066cc !important;
+    }
+    
+    body .candidates-page .btn-outline-secondary {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+    }
+    
+    body .candidates-page .btn-success {
+        background-color: #006600 !important;
+        color: #ffffff !important;
+    }
+    
+    body .candidates-page .btn-sm {
+        font-size: 0.8rem !important;
+        padding: 0.25rem 0.5rem !important;
+    }
+</style>
+
+<div class="candidates-page">
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}" style="color: var(--primary, #005a9c);">Dashboard</a></li>
+        <li class="breadcrumb-item active" aria-current="page" style="color: var(--text-secondary, #6c757d);">Candidates</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-1">Candidate Records</h1>
+        <p class="text-muted mb-0">Search, filter, export, and manage uploaded candidate data.</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('admin.add_candidate') }}" class="btn btn-outline-primary">
+            <i class="fa-solid fa-user-plus me-1"></i>Add Candidate
+        </a>
+        <a href="{{ url_for('admin.upload_candidates') }}" class="btn btn-primary">
+            <i class="fa-solid fa-upload me-1"></i>Upload
+        </a>
+    </div>
+</div>
+
+<form method="get" class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <div class="row g-2">
+            <div class="col-lg-3">
+                <label class="form-label">Search</label>
+                <input type="text" class="form-control" name="search" value="{{ selected_search }}" placeholder="JAMB reg, name, state">
+            </div>
+            <div class="col-lg-3">
+                <label class="form-label">Programme</label>
+                <select class="form-select" name="programme_id">
+                    <option value="">All Programmes</option>
+                    {% for programme in programmes %}
+                        <option value="{{ programme.id }}" {% if selected_programme_id == programme.id %}selected{% endif %}>
+                            {{ programme.name }} ({{ programme.code }})
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <label class="form-label">Status</label>
+                <select class="form-select" name="status">
+                    <option value="">All Statuses</option>
+                    {% for status in statuses %}
+                        <option value="{{ status }}" {% if selected_status == status %}selected{% endif %}>{{ status|capitalize }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-2">
+                <label class="form-label">Quota Category</label>
+                <select class="form-select" name="quota_category">
+                    <option value="">All Categories</option>
+                    {% for quota in quota_categories %}
+                        <option value="{{ quota }}" {% if selected_quota_category == quota %}selected{% endif %}>{{ quota|capitalize }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-lg-2 d-flex gap-2 align-items-end">
+                <button class="btn btn-outline-primary w-100" type="submit">Apply</button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<div class="d-flex justify-content-between align-items-center mb-2">
+    <div class="small text-muted">
+        Showing {{ pagination.items|length }} of {{ pagination.total }} candidates
+    </div>
+    <div class="d-flex gap-2">
+        <!-- Bulk CAPS Verify -->
+        <div class="dropdown">
+            <button class="btn btn-success btn-sm dropdown-toggle" data-bs-toggle="dropdown" type="button"
+                    id="bulkVerifyBtn" title="Mark groups of candidates as CAPS Verified in one click">
+                <i class="fa-solid fa-shield-check me-1"></i>CAPS Verify
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><h6 class="dropdown-header">Bulk CAPS Verification</h6></li>
+                <li>
+                    <button class="dropdown-item" onclick="bulkVerify('admitted')">
+                        <i class="fa-solid fa-graduation-cap me-2 text-success"></i>
+                        Verify All <strong>Admitted</strong>
+                        <div class="small text-muted">All candidates with admission decision</div>
+                    </button>
+                </li>
+                <li>
+                    <button class="dropdown-item" onclick="bulkVerify('recommended')">
+                        <i class="fa-solid fa-thumbs-up me-2 text-info"></i>
+                        Verify All <strong>Recommended</strong>
+                        <div class="small text-muted">Candidates recommended but not yet admitted</div>
+                    </button>
+                </li>
+                <li><hr class="dropdown-divider"></li>
+                <li>
+                    <button class="dropdown-item text-warning" onclick="bulkVerify('all')">
+                        <i class="fa-solid fa-users me-2"></i>
+                        Verify <strong>All Candidates</strong>
+                        <div class="small text-muted">Every unverified candidate in this session</div>
+                    </button>
+                </li>
+            </ul>
+        </div>
+        <!-- Export -->
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary dropdown-toggle btn-sm" data-bs-toggle="dropdown" type="button">
+                <i class="fa-solid fa-file-export me-1"></i>Export
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                    <a class="dropdown-item" href="{{ url_for('admin.candidates', search=selected_search, programme_id=selected_programme_id, status=selected_status, quota_category=selected_quota_category, export='csv') }}">
+                        Export CSV
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="{{ url_for('admin.candidates', search=selected_search, programme_id=selected_programme_id, status=selected_status, quota_category=selected_quota_category, export='xlsx') }}">
+                        Export Excel
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Bulk verify result banner (hidden by default) -->
+<div id="bulkVerifyAlert" class="alert alert-success alert-dismissible fade d-none mb-2" role="alert">
+    <i class="fa-solid fa-circle-check me-2"></i>
+    <span id="bulkVerifyMsg"></span>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="candidateTable">
+            <thead class="table-light">
+                <tr>
+                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" role="button" data-sort-index="0" class="text-nowrap">JAMB Reg <i class="fa-solid fa-sort small"></i></th>
+                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" role="button" data-sort-index="1" class="text-nowrap">Full Name <i class="fa-solid fa-sort small"></i></th>
+                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" role="button" data-sort-index="2" class="text-nowrap">State <i class="fa-solid fa-sort small"></i></th>
+                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" role="button" data-sort-index="3" class="text-nowrap">UTME <i class="fa-solid fa-sort small"></i></th>
+                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" role="button" data-sort-index="4" class="text-nowrap">Post-UTME <i class="fa-solid fa-sort small"></i></th>
+                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" class="text-nowrap">Programme</th>
+                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" class="text-nowrap">Session</th>
+                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" class="text-end text-nowrap">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if candidates %}
+                    {% for candidate in candidates %}
+                        <tr data-status="{{ candidate.status }}" data-name="{{ candidate.full_name|lower }}" data-jamb="{{ candidate.jamb_reg_number|lower }}">
+                            <td style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">
+                                <code style="color: #000000 !important; background-color: #f0f0f0 !important; border: 1px solid #000000 !important; padding: 4px !important; font-weight: 700 !important;">{{ candidate.jamb_reg_number }}</code>
+                            </td>
+                            <td style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">{{ candidate.full_name }}</td>
+                            <td style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">{{ candidate.state_of_origin or 'N/A' }}</td>
+                            <td style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">{{ candidate.utme_score or 'N/A' }}</td>
+                            <td style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">
+                                {% if candidate.post_utme_present and candidate.post_utme_score %}
+                                    {{ "%.1f"|format(candidate.post_utme_score) }}
+                                {% else %}
+                                    <span style="color: #999999 !important; font-weight: 700 !important;">Not taken</span>
+                                {% endif %}
+                            </td>
+                            <td style="color: #000000 !important; background-color: #ffffcc !important; font-weight: 900 !important;">
+                                {% if candidate.first_choice_programme %}
+                                    {{ candidate.first_choice_programme.name }} ({{ candidate.first_choice_programme.code }})
+                                {% else %}
+                                    <span style="color: #000000 !important; font-weight: 700 !important;">Not assigned</span>
+                                {% endif %}
+                            </td>
+                            <td style="color: #000000 !important; background-color: #ccffcc !important; font-weight: 900 !important;">
+                                {% if candidate.session %}
+                                    {{ candidate.session.name }}
+                                {% else %}
+                                    <span style="color: #000000 !important; font-weight: 700 !important;">Not assigned</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end text-nowrap" style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">
+                                <a href="{{ url_for('admin.candidate_detail', id=candidate.id) }}" class="btn btn-sm btn-outline-secondary me-1">View</a>
+                                <a href="{{ url_for('admin.edit_candidate', id=candidate.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4 text-muted" style="color: #000000 !important; font-weight: 700 !important;">No candidates found for current filters.</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% if pagination.pages > 1 %}
+<nav aria-label="Candidates pagination" class="mt-3">
+    <ul class="pagination pagination-sm mb-0">
+        {% if pagination.has_prev %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin.candidates', page=pagination.prev_num, search=selected_search, programme_id=selected_programme_id, status=selected_status, quota_category=selected_quota_category) }}">Previous</a>
+            </li>
+        {% endif %}
+        {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+            {% if page_num %}
+                <li class="page-item {{ 'active' if page_num == pagination.page else '' }}">
+                    <a class="page-link" href="{{ url_for('admin.candidates', page=page_num, search=selected_search, programme_id=selected_programme_id, status=selected_status, quota_category=selected_quota_category) }}">{{ page_num }}</a>
+                </li>
+            {% else %}
+                <li class="page-item disabled"><span class="page-link">…</span></li>
+            {% endif %}
+        {% endfor %}
+        {% if pagination.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="{{ url_for('admin.candidates', page=pagination.next_num, search=selected_search, programme_id=selected_programme_id, status=selected_status, quota_category=selected_quota_category) }}">Next</a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+{% endif %}
+</div> <!-- End of candidates-page -->
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(() => {
+    const table = document.getElementById('candidateTable');
+    if (!table) return;
+    
+    // Enhanced client-side search functionality
+    const searchInput = document.querySelector('input[name="search"]');
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const rows = table.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                const nameMatch = row.dataset.name.includes(searchTerm);
+                const jambMatch = row.dataset.jamb.includes(searchTerm);
+                const textMatch = row.textContent.toLowerCase().includes(searchTerm);
+                const searchMatch = nameMatch || jambMatch || textMatch;
+                
+                row.style.display = searchMatch ? '' : 'none';
+            });
+        });
+    }
+    
+    // Programme filter
+    const programmeSelect = document.querySelector('select[name="programme_id"]');
+    if (programmeSelect) {
+        programmeSelect.addEventListener('change', function() {
+            const selectedProgramme = this.value.toLowerCase();
+            const rows = table.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                if (!selectedProgramme) {
+                    row.style.display = '';
+                    return;
+                }
+                
+                const programmeCell = row.cells[3]; // Programme column
+                const programmeText = programmeCell.textContent.toLowerCase();
+                const programmeMatch = programmeText.includes(selectedProgramme) || 
+                                     programmeText.includes('not assigned');
+                
+                row.style.display = programmeMatch ? '' : 'none';
+            });
+        });
+    }
+    
+    // Status filter
+    const statusSelect = document.querySelector('select[name="status"]');
+    if (statusSelect) {
+        statusSelect.addEventListener('change', function() {
+            const selectedStatus = this.value.toLowerCase();
+            const rows = table.querySelectorAll('tbody tr');
+            
+            rows.forEach(row => {
+                if (!selectedStatus) {
+                    row.style.display = '';
+                    return;
+                }
+                
+                const statusMatch = row.dataset.status === selectedStatus;
+                row.style.display = statusMatch ? '' : 'none';
+            });
+        });
+    }
+    
+    // Sort functionality
+    const headers = table.querySelectorAll('th[data-sort-index]');
+    headers.forEach((header) => {
+        header.addEventListener('click', () => {
+            const index = Number(header.dataset.sortIndex);
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr')).filter((row) => row.children.length > index);
+            const isAsc = header.dataset.order !== 'asc';
+            rows.sort((a, b) => {
+                const va = (a.children[index].innerText || '').trim().toLowerCase();
+                const vb = (b.children[index].innerText || '').trim().toLowerCase();
+                
+                // Handle numeric sorting for UTME scores
+                if (index === 4 || index === 5) { // UTME Score or Post-UTME columns
+                    const numA = parseFloat(va.replace(/[^0-9.]/g, '')) || 0;
+                    const numB = parseFloat(vb.replace(/[^0-9.]/g, '')) || 0;
+                    return isAsc ? numA - numB : numB - numA;
+                }
+                
+                return isAsc ? va.localeCompare(vb) : vb.localeCompare(va);
+            });
+            rows.forEach((row) => tbody.appendChild(row));
+            headers.forEach((h) => delete h.dataset.order);
+            header.dataset.order = isAsc ? 'asc' : 'desc';
+        });
+    });
+    
+    // Add row hover effects
+    const rows = table.querySelectorAll('tbody tr');
+    rows.forEach(row => {
+        row.addEventListener('mouseenter', function() {
+            this.style.backgroundColor = '#f5f5f5';
+        });
+        row.addEventListener('mouseleave', function() {
+            this.style.backgroundColor = '';
+        });
+    });
+})();
+
+/* ── Bulk CAPS Verification ─────────────────────────────────────────── */
+async function bulkVerify(target) {
+    const labels = {
+        admitted:    'all Admitted candidates',
+        recommended: 'all Recommended candidates',
+        all:         'ALL unverified candidates in this session'
+    };
+    const label = labels[target] || target;
+
+    if (!confirm(`Mark ${label} as CAPS Verified?\n\nThis action cannot be undone.`)) return;
+
+    const btn = document.getElementById('bulkVerifyBtn');
+    const alertEl  = document.getElementById('bulkVerifyAlert');
+    const msgEl    = document.getElementById('bulkVerifyMsg');
+
+    // Spinner state
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Verifying…';
+
+    try {
+        const resp = await fetch('{{ url_for("admin.bulk_verify_candidates") }}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken':  '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({ target })
+        });
+
+        const data = await resp.json();
+
+        // Restore button
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-shield-check me-1"></i>CAPS Verify';
+
+        if (data.success) {
+            const count = data.verified ?? 0;
+            if (count === 0) {
+                showBulkAlert(alertEl, msgEl,
+                    'No unverified candidates matched — they may all be verified already.',
+                    'info');
+            } else {
+                showBulkAlert(alertEl, msgEl,
+                    `✅ ${count} candidate${count !== 1 ? 's' : ''} successfully marked as CAPS Verified. Refreshing…`,
+                    'success');
+                // Reload after short delay so badges update
+                setTimeout(() => location.reload(), 2000);
+            }
+        } else {
+            showBulkAlert(alertEl, msgEl,
+                `❌ Verification failed: ${data.message || 'Unknown error'}`,
+                'danger');
+        }
+    } catch (err) {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-shield-check me-1"></i>CAPS Verify';
+        showBulkAlert(alertEl, msgEl, `❌ Network error: ${err.message}`, 'danger');
+    }
+}
+
+function showBulkAlert(alertEl, msgEl, message, type) {
+    // Remove all alert colour classes then apply the requested one
+    alertEl.classList.remove('alert-success', 'alert-danger', 'alert-info', 'alert-warning', 'd-none');
+    alertEl.classList.add(`alert-${type}`, 'show');
+    msgEl.textContent = message;
+    alertEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+</script>
+{% endblock %}

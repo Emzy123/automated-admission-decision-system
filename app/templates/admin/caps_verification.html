@@ -1,0 +1,444 @@
+{% extends "base.html" %}
+{% block title %}CAPS Verification - {{ candidate.full_name }}{% endblock %}
+{% block styles %}
+<style>
+.verification-result {
+    border-left: 4px solid;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+.verification-success { border-color: #28a745; background-color: #f8fff9; }
+.verification-error { border-color: #dc3545; background-color: #fff8f8; }
+.verification-warning { border-color: #ffc107; background-color: #fffbf0; }
+
+.comparison-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    width: 25%;
+}
+.comparison-table td {
+    vertical-align: middle;
+}
+.match-success { color: #28a745; font-weight: 600; }
+.match-error { color: #dc3545; font-weight: 600; }
+.match-pending { color: #ffc107; font-weight: 600; }
+
+.issue-item {
+    background-color: #f8d7da;
+    border-left: 3px solid #dc3545;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+</style>
+{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('admission.caps_dashboard') }}">CAPS Integration</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Verification Details</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-1">CAPS Verification Details</h1>
+        <p class="text-muted mb-0">{{ candidate.full_name }} ({{ candidate.jamb_reg_number }})</p>
+    </div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('admin.candidate_detail', id=candidate.id) }}" 
+           class="btn btn-outline-primary">
+            <i class="fa-solid fa-user me-1"></i>View Profile
+        </a>
+        <button type="button" class="btn btn-outline-secondary" onclick="window.history.back()">
+            <i class="fa-solid fa-arrow-left me-1"></i>Back
+        </button>
+    </div>
+</div>
+
+<!-- Verification Status -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Verification Status</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="me-3">
+                        {% if candidate.caps_verified %}
+                            <i class="fa-solid fa-check-circle fa-2x text-success"></i>
+                        {% else %}
+                            <i class="fa-solid fa-times-circle fa-2x text-danger"></i>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <h6 class="mb-1">
+                            {% if candidate.caps_verified %}
+                                <span class="text-success">Verified</span>
+                            {% else %}
+                                <span class="text-danger">Not Verified</span>
+                            {% endif %}
+                        </h6>
+                        <p class="text-muted mb-0">
+                            {% if candidate.caps_verification_date %}
+                                Verified on {{ candidate.caps_verification_date.strftime('%B %d, %Y') }}
+                            {% else %}
+                                Verification not completed
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                
+                {% if candidate.caps_status %}
+                    <div class="alert alert-{{ 
+                        'success' if candidate.caps_verified else 
+                        'warning' if candidate.caps_status == 'queried' else 
+                        'danger' 
+                    }}">
+                        <strong>Status:</strong> {{ candidate.caps_status|title }}
+                    </div>
+                {% endif %}
+                
+                {% if candidate.caps_verification_issues %}
+                    <div class="mt-3">
+                        <h6>Verification Issues:</h6>
+                        {% for issue in candidate.caps_verification_issues %}
+                            <div class="issue-item">
+                                <i class="fa-solid fa-exclamation-triangle me-2"></i>
+                                {{ issue }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Candidate Information</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm">
+                    <tr>
+                        <th width="40%">JAMB Reg Number:</th>
+                        <td><code>{{ candidate.jamb_reg_number }}</code></td>
+                    </tr>
+                    <tr>
+                        <th>Full Name:</th>
+                        <td>{{ candidate.full_name }}</td>
+                    </tr>
+                    <tr>
+                        <th>State of Origin:</th>
+                        <td>{{ candidate.state_of_origin }}</td>
+                    </tr>
+                    <tr>
+                        <th>UTME Score:</th>
+                        <td>{{ candidate.utme_score }}</td>
+                    </tr>
+                    <tr>
+                        <th>Post-UTME Score:</th>
+                        <td>{{ candidate.post_utme_score or 'Not Available' }}</td>
+                    </tr>
+                    <tr>
+                        <th>Local Status:</th>
+                        <td>
+                            <span class="badge bg-{{ 
+                                'success' if candidate.status == 'verified' else 
+                                'warning' if candidate.status == 'pending' else 
+                                'secondary' 
+                            }}">
+                                {{ candidate.status|title }}
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Data Comparison -->
+{% if comparison %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Local vs CAPS Data Comparison</h5>
+    </div>
+    <div class="card-body">
+        <table class="table comparison-table">
+            <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>Local Data</th>
+                    <th>CAPS Data</th>
+                    <th>Match Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for field, data in comparison.items() %}
+                    {% if field != 'olevel_results' %}
+                        <tr>
+                            <th>{{ field|title }}</th>
+                            <td>{{ data.local or 'Not Available' }}</td>
+                            <td>{{ data.caps or 'Not Available' }}</td>
+                            <td>
+                                {% if data.match %}
+                                    <i class="fa-solid fa-check text-success"></i>
+                                    <span class="match-success">Match</span>
+                                {% else %}
+                                    <i class="fa-solid fa-times text-danger"></i>
+                                    <span class="match-error">Mismatch</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endif %}
+                {% endfor %}
+                
+                {% if comparison.olevel_results %}
+                    <tr>
+                        <th>O'Level Results</th>
+                        <td>{{ comparison.olevel_results.local_count }} subjects</td>
+                        <td>{{ comparison.olevel_results.caps_count }} subjects</td>
+                        <td>
+                            {% if comparison.olevel_results.match %}
+                                <i class="fa-solid fa-check text-success"></i>
+                                <span class="match-success">Match</span>
+                            {% else %}
+                                <i class="fa-solid fa-times text-danger"></i>
+                                <span class="match-error">Mismatch</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+        
+        {% if not overall_match %}
+            <div class="alert alert-warning mt-3">
+                <i class="fa-solid fa-exclamation-triangle me-2"></i>
+                <strong>Data Mismatch Detected:</strong> There are discrepancies between local and CAPS data. 
+                Please review and update the candidate information accordingly.
+            </div>
+        {% else %}
+            <div class="alert alert-success mt-3">
+                <i class="fa-solid fa-check-circle me-2"></i>
+                <strong>Perfect Match:</strong> All data fields match between local system and CAPS.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endif %}
+
+<!-- O'Level Results Comparison -->
+{% if candidate.olevel_results %}
+<div class="card border-0 shadow-sm mb-4">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">O'Level Results</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6 class="mb-3">Local System Records</h6>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Subject</th>
+                                <th>Grade</th>
+                                <th>Exam Body</th>
+                                <th>Year</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for result in candidate.olevel_results %}
+                                <tr>
+                                    <td>{{ result.subject }}</td>
+                                    <td>{{ result.grade }}</td>
+                                    <td>{{ result.exam_body }}</td>
+                                    <td>{{ result.exam_year }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            {% if comparison and comparison.olevel_results and comparison.olevel_results.caps_count > 0 %}
+                <div class="col-md-6">
+                    <h6 class="mb-3">CAPS Records</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Subject</th>
+                                    <th>Grade</th>
+                                    <th>Exam Body</th>
+                                    <th>Year</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for result in comparison.olevel_results.caps %}
+                                    <tr>
+                                        <td>{{ result.subject }}</td>
+                                        <td>{{ result.grade }}</td>
+                                        <td>{{ result.exam_body }}</td>
+                                        <td>{{ result.exam_year }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Action Buttons -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-primary" onclick="reverifyCandidate()">
+                <i class="fa-solid fa-sync me-1"></i>Re-verify with CAPS
+            </button>
+            
+            {% if current_user.role == 'admin' and not candidate.caps_verified %}
+                <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#overrideModal">
+                    <i class="fa-solid fa-exclamation-triangle me-1"></i>Override Verification
+                </button>
+            {% endif %}
+            
+            <button type="button" class="btn btn-outline-secondary" onclick="exportVerificationReport()">
+                <i class="fa-solid fa-download me-1"></i>Export Report
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Override Modal -->
+{% if current_user.role == 'admin' %}
+<div class="modal fade" id="overrideModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Override CAPS Verification</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{{ url_for('admission.caps_override', candidate_id=candidate.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="alert alert-warning">
+                        <i class="fa-solid fa-exclamation-triangle me-2"></i>
+                        <strong>Warning:</strong> Overriding CAPS verification should only be done in exceptional circumstances. 
+                        This action will be logged for audit purposes.
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="overrideReason" class="form-label">Reason for Override</label>
+                        <textarea class="form-control" id="overrideReason" name="reason" rows="4" required
+                                  placeholder="Please explain why this verification is being overridden..."></textarea>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="confirmOverride" name="confirm" required>
+                            <label class="form-check-label" for="confirmOverride">
+                                I understand this action will be audited and is irreversible
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fa-solid fa-exclamation-triangle me-1"></i>Override Verification
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+function reverifyCandidate() {
+    if (confirm('Re-verify this candidate with CAPS? This will update their verification status.')) {
+        fetch(`/admission/caps/verify/{{ candidate.id }}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showAlert(data.message, 'success');
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                showAlert(data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            showAlert('Re-verification failed: ' + error.message, 'danger');
+        });
+    }
+}
+
+function exportVerificationReport() {
+    const reportData = {{ {
+        'candidate': {
+            'id': candidate.id,
+            'jamb_reg': candidate.jamb_reg_number,
+            'name': candidate.full_name,
+            'state': candidate.state_of_origin,
+            'utme_score': candidate.utme_score,
+            'post_utme_score': candidate.post_utme_score
+        },
+        'verification': {
+            'caps_verified': candidate.caps_verified,
+            'caps_status': candidate.caps_status,
+            'verification_date': candidate.caps_verification_date|string if candidate.caps_verification_date else 'Not verified',
+            'issues': candidate.caps_verification_issues or []
+        },
+        'comparison': comparison,
+        'overall_match': overall_match
+    }|tojson|safe }};
+    
+    const dataStr = JSON.stringify(reportData, null, 2);
+    const dataBlob = new Blob([dataStr], { type: 'application/json' });
+    const url = URL.createObjectURL(dataBlob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `caps_verification_{{ candidate.jamb_reg_number }}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function showAlert(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

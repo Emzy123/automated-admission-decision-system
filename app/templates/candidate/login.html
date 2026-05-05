@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Candidate Portal Login - CUSTECH</title>
+    
+    <!-- Accessibility Meta Tags -->
+    <meta name="description" content="Official CUSTECH Candidate Portal Login">
+    <meta name="keywords" content="CUSTECH, candidate, login, admission">
+    <meta name="author" content="CUSTECH Administration">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    
+    <!-- Local Bootstrap 5 CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/bootstrap.min.css') }}">
+    
+    <!-- Local Font Awesome 6 -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/fontawesome.min.css') }}">
+    
+    <!-- Government Academic Styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/accessibility.css') }}">
+    
+    <style>
+        :root {
+            --primary: #005a9c;
+            --primary-dark: #004170;
+            --warning: #e65100;
+            --danger: #b71c1c;
+            --gray-50: #f8f9fa;
+        }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--gray-50);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .login-card {
+            width: 100%;
+            max-width: 450px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            overflow: hidden;
+            border-top: 5px solid var(--primary);
+        }
+        
+        .login-header {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: white;
+            padding: 2rem;
+            text-align: center;
+        }
+        
+        .brand-logo {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+        
+        .btn-login {
+            background: var(--primary);
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem;
+        }
+        
+        .btn-login:hover {
+            background: var(--primary-dark);
+            color: white;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container d-flex justify-content-center">
+    <div class="login-card">
+        <div class="login-header">
+            <div class="brand-logo">
+                <i class="fa-solid fa-user-graduate"></i>
+            </div>
+            <h4>Candidate Portal</h4>
+            <p class="mb-0 text-white-50">Check your admission status</p>
+        </div>
+        
+        <div class="p-4">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                            {{ message }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endwith %}
+            
+            <form action="{{ url_for('candidate.login') }}" method="POST">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                
+                <div class="form-floating mb-3">
+                    <input type="text" class="form-control" id="jamb_reg_number" name="jamb_reg_number" placeholder="JAMB Reg Number" required>
+                    <label for="jamb_reg_number"><i class="fa-solid fa-id-card me-2"></i>JAMB Reg Number</label>
+                </div>
+                
+                <div class="form-floating mb-4">
+                    <input type="password" class="form-control" id="password" name="password" placeholder="Password" required>
+                    <label for="password"><i class="fa-solid fa-lock me-2"></i>Password</label>
+                    <small class="text-muted d-block mt-1">Default password is <strong>password</strong></small>
+                </div>
+                
+                <div class="d-grid gap-2 mb-3">
+                    <button type="submit" class="btn btn-login btn-lg">Login to Portal</button>
+                </div>
+            </form>
+        </div>
+        
+        <div class="bg-light p-3 text-center border-top">
+            <small class="text-muted">
+                Are you a staff member? <a href="{{ url_for('auth.login') }}" class="text-decoration-none">Staff Login</a>
+            </small>
+        </div>
+    </div>
+</div>
+
+<script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+</body>
+</html>

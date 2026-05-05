@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+{% block title %}System Health{% endblock %}
+{% block styles %}
+<style>
+.health-card {
+    border: 0;
+    border-radius: 0.9rem;
+    box-shadow: 0 0.35rem 1rem rgba(31, 45, 61, 0.08);
+    transition: all 0.3s ease;
+}
+.health-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1.5rem rgba(31, 45, 61, 0.12);
+}
+.health-status {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+.status-healthy { color: #28a745; }
+.status-warning { color: #ffc107; }
+.status-error { color: #dc3545; }
+.status-info { color: #17a2b8; }
+
+.metric-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #e9ecef;
+}
+.metric-item:last-child {
+    border-bottom: none;
+}
+.metric-label {
+    font-weight: 600;
+    color: #6c757d;
+}
+.metric-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #2f3e55;
+}
+
+.log-entry {
+    padding: 0.5rem;
+    margin-bottom: 0.25rem;
+    border-left: 3px solid;
+    background-color: #f8f9fa;
+}
+.log-error {
+    border-left-color: #dc3545;
+    background-color: #f8d7da;
+}
+.log-warning {
+    border-left-color: #ffc107;
+    background-color: #fff3cd;
+}
+.log-info {
+    border-left-color: #17a2b8;
+    background-color: #d1ecf1;
+}
+.log-time {
+    font-size: 0.875rem;
+    color: #6c757d;
+    font-family: 'Courier New', monospace;
+}
+</style>
+{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item active" aria-current="page">System Health</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-1">System Health Monitor</h1>
+        <p class="text-muted mb-0">Real-time system status and performance metrics</p>
+    </div>
+    <div>
+        <button type="button" class="btn btn-outline-primary btn-sm" onclick="refreshHealth()">
+            <i class="fa-solid fa-sync me-1"></i>Refresh
+        </button>
+    </div>
+</div>
+
+<!-- System Status Overview -->
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card health-card h-100">
+            <div class="card-body text-center">
+                <div class="health-status status-healthy">
+                    <i class="fa-solid fa-check-circle"></i>
+                </div>
+                <h6 class="card-title">Database</h6>
+                <p class="text-muted mb-0">Connection: Active</p>
+                <div class="metric-item">
+                    <span class="metric-label">Tables:</span>
+                    <span class="metric-value">{{ health_stats.total_tables }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card health-card h-100">
+            <div class="card-body text-center">
+                <div class="health-status status-healthy">
+                    <i class="fa-solid fa-check-circle"></i>
+                </div>
+                <h6 class="card-title">Application</h6>
+                <p class="text-muted mb-0">Status: Running</p>
+                <div class="metric-item">
+                    <span class="metric-label">Uptime:</span>
+                    <span class="metric-value">{{ health_stats.uptime }}%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card health-card h-100">
+            <div class="card-body text-center">
+                <div class="health-status status-healthy">
+                    <i class="fa-solid fa-check-circle"></i>
+                </div>
+                <h6 class="card-title">Cache</h6>
+                <p class="text-muted mb-0">Status: Active</p>
+                <div class="metric-item">
+                    <span class="metric-label">Hit Rate:</span>
+                    <span class="metric-value">{{ health_stats.cache_hit_rate }}%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card health-card h-100">
+            <div class="card-body text-center">
+                <div class="health-status {% if health_stats.disk_usage > 80 %}status-warning{% else %}status-healthy{% endif %}">
+                    <i class="fa-solid {% if health_stats.disk_usage > 80 %}fa-exclamation-triangle{% else %}fa-check-circle{% endif %}"></i>
+                </div>
+                <h6 class="card-title">Storage</h6>
+                <p class="text-muted mb-0">Disk Usage</p>
+                <div class="metric-item">
+                    <span class="metric-label">Used:</span>
+                    <span class="metric-value">{{ health_stats.disk_usage }}%</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Database Statistics -->
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">Database Statistics</h5>
+            </div>
+            <div class="card-body">
+                <div class="metric-item">
+                    <span class="metric-label">Total Records:</span>
+                    <span class="metric-value">{{ health_stats.total_records }}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Active Sessions:</span>
+                    <span class="metric-value">{{ health_stats.active_sessions }}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Total Users:</span>
+                    <span class="metric-value">{{ health_stats.total_users }}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Query Time:</span>
+                    <span class="metric-value">{{ health_stats.avg_query_time }}ms</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">System Resources</h5>
+            </div>
+            <div class="card-body">
+                <div class="metric-item">
+                    <span class="metric-label">Memory Usage:</span>
+                    <span class="metric-value">{{ health_stats.memory_usage }}MB</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">CPU Usage:</span>
+                    <span class="metric-value">{{ health_stats.cpu_usage }}%</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Active Connections:</span>
+                    <span class="metric-value">{{ health_stats.active_connections }}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">Requests/min:</span>
+                    <span class="metric-value">{{ health_stats.requests_per_min }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent System Logs -->
+<div class="card border-0 shadow-sm">
+    <div class="card-header bg-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Recent System Logs</h5>
+            <div class="btn-group btn-group-sm">
+                <button type="button" class="btn btn-outline-secondary active" onclick="filterLogs('all')">All</button>
+                <button type="button" class="btn btn-outline-danger" onclick="filterLogs('error')">Errors</button>
+                <button type="button" class="btn btn-outline-warning" onclick="filterLogs('warning')">Warnings</button>
+                <button type="button" class="btn btn-outline-info" onclick="filterLogs('info')">Info</button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+            <table class="table table-hover mb-0">
+                <thead class="table-light sticky-top">
+                    <tr>
+                        <th>Time</th>
+                        <th>Level</th>
+                        <th>Message</th>
+                        <th>Source</th>
+                    </tr>
+                </thead>
+                <tbody id="logsTable">
+                    {% for log in recent_logs %}
+                    <tr class="log-entry log-{{ log.level.lower() }}">
+                        <td class="log-time">{{ log.timestamp.strftime('%H:%M:%S') }}</td>
+                        <td>
+                            <span class="badge bg-{{ log.level.lower() }}">{{ log.level.upper() }}</span>
+                        </td>
+                        <td>{{ log.message }}</td>
+                        <td>{{ log.source }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- System Configuration -->
+<div class="row g-3">
+    <div class="col-md-12">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">System Configuration</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6>Application Settings</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Environment:</strong> {{ system_config.environment }}</li>
+                            <li><strong>Debug Mode:</strong> 
+                                <span class="badge bg-{{ 'danger' if system_config.debug else 'success' }}">
+                                    {{ 'ON' if system_config.debug else 'OFF' }}
+                                </span>
+                            </li>
+                            <li><strong>Database:</strong> {{ system_config.database }}</li>
+                            <li><strong>Version:</strong> {{ system_config.version }}</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h6>Performance Settings</h6>
+                        <ul class="list-unstyled">
+                            <li><strong>Cache Timeout:</strong> {{ system_config.cache_timeout }}s</li>
+                            <li><strong>Session Timeout:</strong> {{ system_config.session_timeout }}min</li>
+                            <li><strong>Max Upload Size:</strong> {{ system_config.max_upload_size }}MB</li>
+                            <li><strong>Log Level:</strong> {{ system_config.log_level }}</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+let currentFilter = 'all';
+
+function refreshHealth() {
+    location.reload();
+}
+
+function filterLogs(level) {
+    currentFilter = level;
+    const rows = document.querySelectorAll('#logsTable tr');
+    
+    rows.forEach(row => {
+        if (level === 'all') {
+            row.style.display = '';
+        } else {
+            const rowLevel = row.querySelector('.badge').textContent.toLowerCase();
+            row.style.display = rowLevel === level ? '' : 'none';
+        }
+    });
+    
+    // Update active button
+    document.querySelectorAll('.btn-group .btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    event.target.classList.add('active');
+}
+
+// Auto-refresh every 30 seconds
+setInterval(() => {
+    if (document.visibilityState === 'visible') {
+        refreshHealth();
+    }
+}, 30000);
+
+// Show notification for system alerts
+{% if health_stats.alerts %}
+{% for alert in health_stats.alerts %}
+showNotification('{{ alert.message }}', '{{ alert.type }}');
+{% endfor %}
+{% endif %}
+
+function showNotification(message, type) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+</script>
+{% endblock %}

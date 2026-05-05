@@ -1,0 +1,189 @@
+{% extends "base.html" %}
+{% block title %}Screening Preview{% endblock %}
+{% block content %}
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.candidates') }}">Candidates</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.candidate_detail', id=candidate.id) }}">{{ candidate.jamb_reg_number }}</a></li>
+        <li class="breadcrumb-item active" aria-current="page">Screening Preview</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-1">Screening Preview</h1>
+        <p class="text-muted mb-0">{{ candidate.full_name }} - {{ candidate.jamb_reg_number }}</p>
+    </div>
+</div>
+
+<!-- Candidate Summary -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Candidate Summary</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Programme:</dt>
+                    <dd class="col-sm-8">{{ candidate.first_choice_programme.name if candidate.first_choice_programme else 'Not Set' }}</dd>
+                    <dt class="col-sm-4">Session:</dt>
+                    <dd class="col-sm-8">{{ candidate.session.name if candidate.session else 'Not Set' }}</dd>
+                    <dt class="col-sm-4">State:</dt>
+                    <dd class="col-sm-8">{{ candidate.state_of_origin or 'Not Set' }}</dd>
+                </dl>
+            </div>
+            <div class="col-md-6">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">UTME Score:</dt>
+                    <dd class="col-sm-8">{{ candidate.utme_score }}</dd>
+                    <dt class="col-sm-4">Post-UTME:</dt>
+                    <dd class="col-sm-8">{{ candidate.post_utme_score if candidate.post_utme_score else 'Not Taken' }}</dd>
+                    <dt class="col-sm-4">O'Level Results:</dt>
+                    <dd class="col-sm-8">{{ candidate.olevel_results|length }} results</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Screening Criteria -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">Screening Criteria Preview</h5>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <h6>Academic Requirements</h6>
+                <ul class="list-unstyled">
+                    <li><strong>UTME Cutoff:</strong> {{ candidate.first_choice_programme.min_utme_score or '140' }}</li>
+                    <li><strong>Required Subjects:</strong> 
+                        {% if candidate.first_choice_programme.required_utme_subjects %}
+                            {{ candidate.first_choice_programme.required_utme_subjects|join(', ') }}
+                        {% else %}
+                            Not specified
+                        {% endif %}
+                    </li>
+                    <li><strong>Mandatory O'Level:</strong>
+                        {% if candidate.first_choice_programme.mandatory_olevel_subjects %}
+                            {{ candidate.first_choice_programme.mandatory_olevel_subjects|join(', ') }}
+                        {% else %}
+                            English Language, Mathematics
+                        {% endif %}
+                    </li>
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h6>Quota Information</h6>
+                <ul class="list-unstyled">
+                    <li><strong>Merit Cutoff:</strong> {{ candidate.first_choice_programme.merit_cutoff or 'Not Set' }}</li>
+                    <li><strong>Catchment Cutoff:</strong> {{ candidate.first_choice_programme.catchment_cutoff or 'Not Set' }}</li>
+                    <li><strong>ELDS Cutoff:</strong> {{ candidate.first_choice_programme.elds_cutoff or 'Not Set' }}</li>
+                    <li><strong>State Category:</strong> 
+                        <span class="badge bg-info">Will be determined during screening</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- UTME Subjects -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">UTME Subjects</h5>
+    </div>
+    <div class="card-body">
+        {% if candidate.utme_subjects %}
+            <div class="row">
+                {% for subject, score in candidate.utme_subjects.items() %}
+                    <div class="col-md-3 mb-2">
+                        <div class="border rounded p-2 text-center">
+                            <div class="small text-muted">{{ subject }}</div>
+                            <div class="h6 mb-0">{{ score }}</div>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="text-muted mb-0">No UTME subjects recorded.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- O'Level Results -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-header bg-white">
+        <h5 class="mb-0">O'Level Results</h5>
+    </div>
+    <div class="card-body">
+        {% if candidate.olevel_results %}
+            {% set sittings = {} %}
+            {% for result in candidate.olevel_results %}
+                {% set _ = sittings.update({result.sitting_number: sittings.get(result.sitting_number, []) + [result]}) %}
+            {% endfor %}
+            
+            {% for sitting, results in sittings.items() %}
+                <h6 class="mb-2">Sitting {{ sitting }}</h6>
+                <div class="table-responsive mb-3">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Subject</th>
+                                <th>Grade</th>
+                                <th>Exam Body</th>
+                                <th>Year</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for result in results %}
+                                <tr>
+                                    <td>{{ result.subject }}</td>
+                                    <td>
+                                        <span class="badge {{ 'bg-success' if result.grade in ['A1', 'B2', 'B3', 'C4', 'C5', 'C6'] else 'bg-danger' }}">
+                                            {{ result.grade }}
+                                        </span>
+                                    </td>
+                                    <td>{{ result.exam_body }}</td>
+                                    <td>{{ result.exam_year }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p class="text-muted mb-0">No O'Level results recorded.</p>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Action Buttons -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body">
+        <form method="post" class="d-inline">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <p class="text-muted mb-0">
+                        <i class="fa-solid fa-info-circle me-1"></i>
+                        Click "Start Screening" to evaluate this candidate against all admission criteria.
+                        The system will check UTME cutoff, subject combinations, O'Level requirements, 
+                        calculate aggregate score, and determine admission recommendation.
+                    </p>
+                </div>
+                <div class="d-flex gap-2">
+                    <a href="{{ url_for('admin.candidate_detail', id=candidate.id) }}" class="btn btn-outline-secondary">
+                        <i class="fa-solid fa-arrow-left me-1"></i>Back to Candidate
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-solid fa-play me-1"></i>Start Screening
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

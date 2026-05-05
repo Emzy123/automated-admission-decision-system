@@ -1,0 +1,475 @@
+{% extends "base.html" %}
+{% block title %}Screening Results{% endblock %}
+{% block content %}
+<style>
+    /* Maximum contrast overrides for screening results table */
+    body .screening-results-page {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+    }
+    
+    /* Force all text to be black with maximum specificity */
+    body .screening-results-page *,
+    body .screening-results-page * *,
+    body .screening-results-page * * *,
+    body .screening-results-page div,
+    body .screening-results-page span,
+    body .screening-results-page p,
+    body .screening-results-page h1,
+    body .screening-results-page h2,
+    body .screening-results-page h3,
+    body .screening-results-page h4,
+    body .screening-results-page h5,
+    body .screening-results-page h6,
+    body .screening-results-page td,
+    body .screening-results-page th,
+    body .screening-results-page label,
+    body .screening-results-page input,
+    body .screening-results-page select,
+    body .screening-results-page textarea,
+    body .screening-results-page code {
+        color: #000000 !important;
+    }
+    
+    /* Table headers with high contrast */
+    body .screening-results-page .table th {
+        background-color: #f0f0f0 !important;
+        color: #000000 !important;
+        font-weight: 900 !important;
+        border: 2px solid #333333 !important;
+    }
+    
+    /* Table cells with high contrast */
+    body .screening-results-page .table td {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border: 1px solid #666666 !important;
+        font-weight: 700 !important;
+    }
+    
+    /* Programme column specifically */
+    body .screening-results-page .table td:nth-child(6) {
+        color: #000000 !important;
+        font-weight: 900 !important;
+        background-color: #ffffcc !important;
+    }
+    
+    /* Session column specifically */
+    body .screening-results-page .table td:nth-child(7) {
+        color: #000000 !important;
+        font-weight: 900 !important;
+        background-color: #ccffcc !important;
+    }
+    
+    /* Status column specifically */
+    body .screening-results-page .table td:nth-child(8) {
+        color: #000000 !important;
+        font-weight: 900 !important;
+        background-color: #ffccff !important;
+    }
+    
+    /* Status badges with maximum contrast */
+    body .screening-results-page .badge {
+        font-weight: 900 !important;
+        border: 2px solid #000000 !important;
+    }
+    
+    body .screening-results-page .badge.bg-success {
+        background-color: #006600 !important;
+        color: #ffffff !important;
+    }
+    
+    body .screening-results-page .badge.bg-danger {
+        background-color: #cc0000 !important;
+        color: #ffffff !important;
+    }
+    
+    body .screening-results-page .badge.bg-primary {
+        background-color: #0066cc !important;
+        color: #ffffff !important;
+    }
+    
+    body .screening-results-page .badge.bg-info {
+        background-color: #0066cc !important;
+        color: #ffffff !important;
+    }
+    
+    body .screening-results-page .badge.bg-warning {
+        background-color: #ff9900 !important;
+        color: #000000 !important;
+    }
+    
+    /* Form elements with high contrast */
+    body .screening-results-page .form-control,
+    body .screening-results-page .form-select {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border: 2px solid #000000 !important;
+        font-weight: 700 !important;
+    }
+    
+    /* Links with high contrast */
+    body .screening-results-page a {
+        color: #0000cc !important;
+        font-weight: 900 !important;
+        text-decoration: underline !important;
+    }
+    
+    /* Headers */
+    body .screening-results-page h1,
+    body .screening-results-page h2,
+    body .screening-results-page h3,
+    body .screening-results-page h4,
+    body .screening-results-page h5 {
+        color: #000000 !important;
+        font-weight: 900 !important;
+        background-color: #ffffff !important;
+    }
+    
+    /* Card headers */
+    body .screening-results-page .card-header {
+        background-color: #f0f0f0 !important;
+        color: #000000 !important;
+        border: 2px solid #000000 !important;
+    }
+    
+    /* Card bodies */
+    body .screening-results-page .card-body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+        border: 1px solid #666666 !important;
+    }
+    
+    /* Buttons */
+    body .screening-results-page .btn {
+        font-weight: 900 !important;
+        border: 2px solid #000000 !important;
+    }
+    
+    body .screening-results-page .btn-primary {
+        background-color: #0066cc !important;
+        color: #ffffff !important;
+    }
+    
+    body .screening-results-page .btn-outline-secondary {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+    }
+    
+    body .screening-results-page .btn-outline-primary {
+        background-color: #ffffff !important;
+        color: #0066cc !important;
+        border-color: #0066cc !important;
+    }
+    
+    body .screening-results-page .btn-success {
+        background-color: #006600 !important;
+        color: #ffffff !important;
+    }
+    
+    body .screening-results-page .btn-sm {
+        font-size: 0.8rem !important;
+        padding: 0.25rem 0.5rem !important;
+    }
+</style>
+
+<div class="screening-results-page">
+<nav aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}" style="color: var(--primary, #005a9c);">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="{{ url_for('admin.candidates') }}" style="color: var(--primary, #005a9c);">Candidates</a></li>
+        <li class="breadcrumb-item active" aria-current="page" style="color: var(--text-secondary, #6c757d);">Screening Results</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="h3 mb-1">Screening Results</h1>
+        <p class="text-muted mb-0">
+            {{ programme.name }} ({{ programme.code }}) - {{ session.name }}
+        </p>
+    </div>
+    <div class="d-flex gap-2">
+        <button class="btn btn-outline-secondary btn-sm" onclick="exportResults()">
+            <i class="fa-solid fa-download me-1"></i>Export
+        </button>
+        <a href="{{ url_for('admin.candidates') }}" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-arrow-left me-1"></i>Back to Candidates
+        </a>
+    </div>
+</div>
+
+<!-- Summary Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="h1 mb-1 text-primary">{{ results.total }}</div>
+                <div class="text-muted">Total Candidates</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="h1 mb-1 text-success">{{ results.admitted }}</div>
+                <div class="text-muted">Recommended</div>
+                <div class="small text-muted">{{ ((results.admitted / results.total) * 100)|round(1) }}%</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-0 shadow-sm h-100">
+            <div class="card-body text-center">
+                <div class="h1 mb-1 text-danger">{{ results.rejected }}</div>
+                <div class="text-muted">Not Recommended</div>
+                <div class="small text-muted">{{ ((results.rejected / results.total) * 100)|round(1) }}%</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filter Options -->
+<div class="card border-0 shadow-sm mb-3">
+    <div class="card-body">
+        <div class="row g-2 align-items-center">
+            <div class="col-auto">
+                <label class="form-label mb-0">Filter:</label>
+            </div>
+            <div class="col-auto">
+                <div class="btn-group" role="group">
+                    <input type="radio" class="btn-check" name="statusFilter" id="filterAll" value="all" checked>
+                    <label class="btn btn-outline-primary" for="filterAll">All ({{ results.total }})</label>
+                    
+                    <input type="radio" class="btn-check" name="statusFilter" id="filterAdmitted" value="recommended">
+                    <label class="btn btn-outline-success" for="filterAdmitted">Recommended ({{ results.admitted }})</label>
+                    
+                    <input type="radio" class="btn-check" name="statusFilter" id="filterRejected" value="rejected">
+                    <label class="btn btn-outline-danger" for="filterRejected">Not Recommended ({{ results.rejected }})</label>
+                </div>
+            </div>
+            <div class="col-auto">
+                <input type="text" class="form-control form-control-sm" id="searchResults" placeholder="Search by name or JAMB reg...">
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Results Table -->
+<div class="card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="resultsTable">
+            <thead class="table-light">
+                <tr>
+                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" role="button" data-sort-index="0" class="text-nowrap">JAMB Reg <i class="fa-solid fa-sort small"></i></th>
+                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" role="button" data-sort-index="1" class="text-nowrap">Full Name <i class="fa-solid fa-sort small"></i></th>
+                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" role="button" data-sort-index="2" class="text-nowrap">State <i class="fa-solid fa-sort small"></i></th>
+                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" role="button" data-sort-index="3" class="text-nowrap">UTME <i class="fa-solid fa-sort small"></i></th>
+                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" role="button" data-sort-index="4" class="text-nowrap">Post-UTME <i class="fa-solid fa-sort small"></i></th>
+                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" class="text-nowrap">Programme</th>
+                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" class="text-nowrap">Session</th>
+                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" class="text-nowrap">Status</th>
+                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" class="text-end text-nowrap">Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for result in results.results %}
+                <tr data-status="{{ result.status }}" 
+                    data-name="{{ result.candidate_name|default('')|lower }}"
+                    data-jamb="{{ result.jamb_reg|default('')|lower }}">
+                    <td style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">
+                        <code style="color: #000000 !important; background-color: #f0f0f0 !important; border: 1px solid #000000 !important; padding: 4px !important; font-weight: 700 !important;">{{ result.jamb_reg|default('N/A') }}</code>
+                    </td>
+                    <td style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">
+                        {% if result.candidate_name %}
+                            {{ result.candidate_name }}
+                        {% else %}
+                            <span style="color: #999999 !important; font-weight: 700 !important;">Candidate #{{ result.candidate_id }}</span>
+                        {% endif %}
+                    </td>
+                    <td style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">{{ result.state_of_origin|default('N/A') }}</td>
+                    <td style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">{{ result.utme_score|default('N/A') }}</td>
+                    <td style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">
+                        {% if result.post_utme_score %}
+                            {{ "%.1f"|format(result.post_utme_score) }}
+                        {% else %}
+                            <span style="color: #999999 !important; font-weight: 700 !important;">Not taken</span>
+                        {% endif %}
+                    </td>
+                    <td style="color: #000000 !important; background-color: #ffffcc !important; font-weight: 900 !important;">
+                        {% if result.programme_name %}
+                            {{ result.programme_name }} ({{ result.programme_code|default('') }})
+                        {% else %}
+                            <span style="color: #000000 !important; font-weight: 700 !important;">Not assigned</span>
+                        {% endif %}
+                    </td>
+                    <td style="color: #000000 !important; background-color: #ccffcc !important; font-weight: 900 !important;">
+                        {% if result.session_name %}
+                            {{ result.session_name }}
+                        {% else %}
+                            <span style="color: #000000 !important; font-weight: 700 !important;">Not assigned</span>
+                        {% endif %}
+                    </td>
+                    <td style="color: #000000 !important; background-color: #ffccff !important; font-weight: 900 !important;">
+                        <span class="badge {{ 'bg-success' if result.status == 'recommended' else 'bg-danger' }}">
+                            {{ 'Recommended' if result.status == 'recommended' else 'Not Recommended' }}
+                        </span>
+                    </td>
+                    <td class="text-end text-nowrap" style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">
+                        <button type="button" class="btn btn-sm btn-outline-secondary me-1 toggle-details-btn" data-index="{{ loop.index0 }}">
+                            <i class="fa-solid fa-chevron-down"></i>
+                        </button>
+                        {% if result.candidate_id %}
+                            <a href="{{ url_for('admin.candidate_detail', id=result.candidate_id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                        {% endif %}
+                    </td>
+                </tr>
+                <!-- Details Row (Hidden by default) -->
+                <tr id="details_{{ loop.index0 }}" class="d-none">
+                    <td colspan="9">
+                        <div class="p-3 bg-light">
+                            <h6 class="mb-3">Screening Evaluation Log</h6>
+                            {% if result.evaluation_log %}
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <strong>Steps:</strong>
+                                        <ul class="mb-0 small">
+                                            {% for step in result.evaluation_log %}
+                                                <li class="{{ 'text-success' if step.passed else 'text-danger' }}">
+                                                    <strong>{{ step.step|replace('_', ' ')|title }}:</strong> 
+                                                    {{ step.message }}
+                                                    {% if step.passed %}
+                                                        <i class="fa-solid fa-check text-success"></i>
+                                                    {% else %}
+                                                        <i class="fa-solid fa-times text-danger"></i>
+                                                    {% endif %}
+                                                </li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-6">
+                                        {% if result.aggregate_score %}
+                                            <strong>Score Breakdown:</strong>
+                                            <ul class="mb-0 small">
+                                                {% for log_item in result.evaluation_log %}
+                                                    {% if log_item.step == 'aggregate' %}
+                                                        <li>JAMB Component: {{ log_item.jamb_component }}</li>
+                                                        <li>Post-UTME Component: {{ log_item.post_utme_component }}</li>
+                                                        <li>O'Level Component: {{ log_item.olevel_component }}</li>
+                                                        <li><strong>Total Aggregate: {{ log_item.aggregate }}</strong></li>
+                                                        <li>Formula: {{ log_item.formula }}</li>
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </ul>
+                                        {% endif %}
+                                        
+                                        {% if result.quota_category %}
+                                            <strong>Quota Classification:</strong>
+                                            <p class="mb-0 small">{{ result.quota_category|capitalize }}</p>
+                                        {% endif %}
+                                        
+                                        {% if result.rejection_reason %}
+                                            <strong>Rejection Reason:</strong>
+                                            <p class="mb-0 small text-danger">{{ result.rejection_reason|replace('_', ' ')|title }}</p>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% else %}
+                                <p class="text-muted mb-0">No evaluation log available.</p>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center py-4 text-muted" style="color: #000000 !important; font-weight: 700 !important;">No screening results found.</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+{{ super() }}
+<script>
+(() => {
+    // Filter functionality
+    const statusFilters = document.querySelectorAll('input[name="statusFilter"]');
+    const searchInput = document.getElementById('searchResults');
+    const tableRows = document.querySelectorAll('#resultsTable tbody tr[data-status]');
+    
+    function filterTable() {
+        const selectedStatus = document.querySelector('input[name="statusFilter"]:checked').value;
+        const searchTerm = searchInput.value.toLowerCase();
+        
+        tableRows.forEach(row => {
+            if (row.querySelector('td[colspan="9"]')) return; // Skip detail rows
+            
+            const statusMatch = selectedStatus === 'all' || row.dataset.status === selectedStatus;
+            const nameMatch = row.dataset.name.includes(searchTerm);
+            const jambMatch = row.dataset.jamb.includes(searchTerm);
+            const searchMatch = nameMatch || jambMatch;
+            
+            const shouldShow = statusMatch && searchMatch;
+            row.style.display = shouldShow ? '' : 'none';
+            
+            // Hide corresponding detail row
+            const detailRow = document.getElementById(row.nextElementSibling?.id);
+            if (detailRow) {
+                detailRow.style.display = 'none';
+            }
+        });
+    }
+    
+    statusFilters.forEach(radio => {
+        radio.addEventListener('change', filterTable);
+    });
+    
+    searchInput.addEventListener('input', filterTable);
+    
+    // Toggle details
+    document.querySelectorAll('.toggle-details-btn').forEach(btn => {
+        btn.addEventListener('click', function(event) {
+            const index = this.dataset.index;
+            const detailRow = document.getElementById(`details_${index}`);
+            const icon = this.querySelector('i');
+            
+            if (detailRow.classList.contains('d-none')) {
+                detailRow.classList.remove('d-none');
+                if (icon) {
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-up');
+                }
+            } else {
+                detailRow.classList.add('d-none');
+                if (icon) {
+                    icon.classList.remove('fa-chevron-up');
+                    icon.classList.add('fa-chevron-down');
+                }
+            }
+        });
+    });
+    
+    // Export functionality
+    window.exportResults = function() {
+        const selectedStatus = document.querySelector('input[name="statusFilter"]:checked').value;
+        const searchTerm = searchInput.value;
+        
+        let exportUrl = `{{ url_for('admin.candidates') }}?export=csv&screening_results=true`;
+        
+        if (selectedStatus !== 'all') {
+            exportUrl += `&status=${selectedStatus}`;
+        }
+        
+        if (searchTerm) {
+            exportUrl += `&search=${encodeURIComponent(searchTerm)}`;
+        }
+        
+        window.open(exportUrl, '_blank');
+    };
+})();
+</script>
+{% endblock %}

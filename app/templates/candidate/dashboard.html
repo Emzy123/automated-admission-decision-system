@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Candidate Dashboard - CUSTECH{% endblock %}
+
+{% block page_title %}Candidate Dashboard{% endblock %}
+
+{% block sidebar %}
+<ul class="nav flex-column" role="menubar">
+    <li class="nav-item" role="none">
+        <a class="nav-link active" href="{{ url_for('candidate.dashboard') }}" role="menuitem">
+            <i class="fa-solid fa-gauge-high nav-icon" aria-hidden="true"></i>
+            <span class="nav-text">Dashboard</span>
+        </a>
+    </li>
+</ul>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <!-- Welcome Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card bg-primary text-white border-0 shadow-sm">
+                <div class="card-body p-4 d-flex align-items-center justify-content-between">
+                    <div>
+                        <h3 class="mb-1">Welcome back, {{ candidate.full_name }}!</h3>
+                        <p class="mb-0 text-white-50">JAMB Reg Number: <strong>{{ candidate.jamb_reg_number }}</strong></p>
+                    </div>
+                    <div class="d-none d-md-block text-end">
+                        <i class="fa-solid fa-user-graduate" style="font-size: 3rem; opacity: 0.5;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Admission Status Card -->
+        <div class="col-lg-8 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fa-solid fa-graduation-cap text-primary me-2"></i>Admission Status</h5>
+                </div>
+                <div class="card-body p-4 text-center">
+                    {% if admission_record %}
+                        {% if admission_record.status in ['admitted', 'accepted'] %}
+                            <div class="text-success mb-3">
+                                <i class="fa-solid fa-circle-check" style="font-size: 4rem;"></i>
+                            </div>
+                            <h4 class="text-success fw-bold">CONGRATULATIONS!</h4>
+                            <p class="lead mb-4">You have been offered provisional admission into CUSTECH.</p>
+                            
+                            <div class="alert alert-success bg-opacity-10 mb-4 text-start">
+                                <div class="row">
+                                    <div class="col-sm-4 text-muted">Programme:</div>
+                                    <div class="col-sm-8 fw-bold">{{ admission_record.programme.name }}</div>
+                                </div>
+                                <hr>
+                                <div class="row">
+                                    <div class="col-sm-4 text-muted">Session:</div>
+                                    <div class="col-sm-8 fw-bold">{{ admission_record.session.name }}</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Action Buttons -->
+                            <div class="d-flex justify-content-center gap-3">
+                                {% if admission_record.status == 'accepted' %}
+                                    <button class="btn btn-success btn-lg" disabled>
+                                        <i class="fa-solid fa-check-double me-2"></i>Admission Accepted
+                                    </button>
+                                {% else %}
+                                    <form action="{{ url_for('candidate.accept_admission', record_id=admission_record.id) }}" method="POST" class="m-0">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                        <button type="submit" class="btn btn-primary btn-lg">
+                                            <i class="fa-solid fa-check me-2"></i>Accept
+                                        </button>
+                                    </form>
+                                    <form action="{{ url_for('candidate.decline_admission', record_id=admission_record.id) }}" method="POST" class="m-0" onsubmit="return confirm('Are you sure you want to decline this admission offer? This action cannot be undone and your slot will be given to the next candidate.');">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                                        <button type="submit" class="btn btn-outline-danger btn-lg">
+                                            <i class="fa-solid fa-times me-2"></i>Decline
+                                        </button>
+                                    </form>
+                                {% endif %}
+                                <a href="{{ url_for('reports.preview_letter', record_id=admission_record.id) }}" target="_blank" class="btn btn-outline-primary btn-lg">
+                                    <i class="fa-solid fa-download me-2"></i>Letter
+                                </a>
+                            </div>
+                        {% elif admission_record.status == 'declined' %}
+                            <div class="text-danger mb-3">
+                                <i class="fa-solid fa-user-slash" style="font-size: 4rem;"></i>
+                            </div>
+                            <h4 class="text-danger fw-bold">ADMISSION DECLINED</h4>
+                            <p class="text-muted">You have successfully declined this provisional admission offer.</p>
+                            <p class="small text-muted mt-2">Your slot has been reallocated to another candidate.</p>
+                        {% elif admission_record.status == 'rejected' %}
+                            <div class="text-danger mb-3">
+                                <i class="fa-solid fa-circle-xmark" style="font-size: 4rem;"></i>
+                            </div>
+                            <h4 class="text-danger fw-bold">NOT ADMITTED</h4>
+                            <p class="text-muted">We regret to inform you that you were not offered admission at this time.</p>
+                            <p class="small text-muted text-start mt-4">Reason: {{ admission_record.rejection_reason }}</p>
+                        {% else %}
+                            <div class="text-warning mb-3">
+                                <i class="fa-solid fa-hourglass-half" style="font-size: 4rem;"></i>
+                            </div>
+                            <h4 class="text-warning fw-bold">SCREENING IN PROGRESS</h4>
+                            <p class="text-muted">Your application is currently being processed by the admission board.</p>
+                            <p>Please check back later.</p>
+                        {% endif %}
+                    {% else %}
+                        <div class="text-info mb-3">
+                            <i class="fa-solid fa-file-circle-check" style="font-size: 4rem;"></i>
+                        </div>
+                        <h4 class="text-info fw-bold">APPLICATION RECEIVED</h4>
+                        <p class="text-muted">Your application data has been imported successfully from JAMB. Awaiting screening.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Profile Details -->
+        <div class="col-lg-4 mb-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h5 class="mb-0"><i class="fa-solid fa-id-badge text-primary me-2"></i>Profile Details</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item px-0 py-3">
+                            <div class="text-muted small mb-1">State of Origin</div>
+                            <div class="fw-bold">{{ candidate.state_of_origin }}</div>
+                        </li>
+                        <li class="list-group-item px-0 py-3">
+                            <div class="text-muted small mb-1">JAMB Score</div>
+                            <div class="fw-bold fs-4 text-primary">{{ candidate.utme_score }}</div>
+                        </li>
+                        <li class="list-group-item px-0 py-3">
+                            <div class="text-muted small mb-1">First Choice Programme</div>
+                            <div class="fw-bold">{{ candidate.first_choice_programme.name if candidate.first_choice_programme else 'Not Assigned' }}</div>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

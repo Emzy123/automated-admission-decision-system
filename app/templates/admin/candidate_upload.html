@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+{% block title %}Upload Candidates - CUSTECH Admission{% endblock %}
+
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Page Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 class="mb-1">Upload Candidates</h4>
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb">
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+                    <li class="breadcrumb-item"><a href="{{ url_for('admin.candidates') }}">Candidates</a></li>
+                    <li class="breadcrumb-item active">Upload</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="row">
+        <!-- Upload Card -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-cloud-upload me-2"></i>Upload JAMB Candidate Data
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <!-- Format Info Alert -->
+                    <div class="alert alert-info d-flex align-items-start mb-4">
+                        <i class="bi bi-info-circle-fill me-2 mt-1"></i>
+                        <div>
+                            <strong>JAMB Format Required</strong><br>
+                            <small>
+                                Your CSV must include: JAMB_REG, FULLNAME, STATE, UTME_SCORE,
+                                UTME_ENG, UTME_MATH, UTME_PHY, UTME_CHEM, G1_SUBJECT, G1_GRADE...
+                            </small>
+                            <br>
+                            <a href="{{ url_for('static', filename='templates/jamb_template.csv') }}" 
+                               class="btn btn-sm btn-outline-primary mt-2">
+                                <i class="bi bi-download me-1"></i>Download Template
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Upload Form -->
+                    <form method="POST" enctype="multipart/form-data" id="uploadForm">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        
+                        <div class="upload-area border-2 border-dashed rounded-3 p-5 text-center mb-4" 
+                             id="dropZone"
+                             style="border-color: #dee2e6; cursor: pointer; transition: all 0.3s;">
+                            <i class="bi bi-file-earmark-arrow-up display-3 text-muted"></i>
+                            <h5 class="mt-3">Drag & Drop CSV File Here</h5>
+                            <p class="text-muted mb-2">or click to browse</p>
+                            <input type="file" name="file" id="fileInput" 
+                                   accept=".csv" class="d-none" required>
+                            <button type="button" class="btn btn-primary" 
+                                    onclick="document.getElementById('fileInput').click()">
+                                <i class="bi bi-folder2-open me-2"></i>Choose File
+                            </button>
+                            <p class="mt-2 mb-0">
+                                <small class="text-muted" id="fileNameDisplay">No file selected</small>
+                            </p>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" name="action" value="preview" 
+                                    class="btn btn-primary" id="previewBtn" disabled>
+                                <i class="bi bi-eye me-2"></i>Preview Data
+                            </button>
+                            <button type="submit" name="action" value="import" 
+                                    class="btn btn-success" id="importBtn" disabled>
+                                <i class="bi bi-check-circle me-2"></i>Import Now
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Instructions Card -->
+        <div class="col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-question-circle me-2"></i>Format Guide
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h6>Required JAMB Columns:</h6>
+                    <table class="table table-sm table-bordered small">
+                        <thead class="table-light">
+                            <tr><th>Column</th><th>Description</th><th>Required</th></tr>
+                        </thead>
+                        <tbody>
+                            <tr><td>JAMB_REG</td><td>10-digit JAMB number</td><td><span class="badge bg-danger">Yes</span></td></tr>
+                            <tr><td>FULLNAME</td><td>Candidate full name</td><td><span class="badge bg-danger">Yes</span></td></tr>
+                            <tr><td>STATE</td><td>State of origin</td><td><span class="badge bg-danger">Yes</span></td></tr>
+                            <tr><td>LGA</td><td>LGA of origin</td><td><span class="badge bg-warning">Optional</span></td></tr>
+                            <tr><td>UTME_SCORE</td><td>Total UTME score</td><td><span class="badge bg-danger">Yes</span></td></tr>
+                            <tr><td>UTME_ENG</td><td>English score</td><td><span class="badge bg-danger">Yes</span></td></tr>
+                            <tr><td>UTME_MATH</td><td>Mathematics score</td><td><span class="badge bg-danger">Yes</span></td></tr>
+                            <tr><td>UTME_PHY</td><td>Physics score</td><td><span class="badge bg-danger">Yes</span></td></tr>
+                            <tr><td>UTME_CHEM</td><td>Chemistry score</td><td><span class="badge bg-danger">Yes</span></td></tr>
+                            <tr><td>FIRST_CHOICE</td><td>University name</td><td><span class="badge bg-warning">Optional</span></td></tr>
+                            <tr><td>FIRST_COURSE</td><td>Course name</td><td><span class="badge bg-warning">Optional</span></td></tr>
+                            <tr><td>WAEC_NO</td><td>WAEC exam number</td><td><span class="badge bg-warning">Optional</span></td></tr>
+                            <tr><td>WAEC_YEAR</td><td>Exam year</td><td><span class="badge bg-warning">Optional</span></td></tr>
+                            <tr><td>G1_SUBJECT</td><td>O'Level subject 1</td><td><span class="badge bg-danger">Yes</span></td></tr>
+                            <tr><td>G1_GRADE</td><td>O'Level grade 1</td><td><span class="badge bg-danger">Yes</span></td></tr>
+                            <tr><td colspan="3"><em>... G2 through G9 for additional subjects</em></td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// File selection handling
+document.getElementById('fileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        document.getElementById('fileNameDisplay').textContent = file.name;
+        document.getElementById('previewBtn').disabled = false;
+        document.getElementById('importBtn').disabled = false;
+    }
+});
+
+// Drag and drop
+const dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = '#0d6efd';
+    dropZone.style.backgroundColor = '#f0f7ff';
+});
+dropZone.addEventListener('dragleave', () => {
+    dropZone.style.borderColor = '#dee2e6';
+    dropZone.style.backgroundColor = 'transparent';
+});
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.style.borderColor = '#dee2e6';
+    dropZone.style.backgroundColor = 'transparent';
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith('.csv')) {
+        document.getElementById('fileInput').files = e.dataTransfer.files;
+        document.getElementById('fileNameDisplay').textContent = file.name;
+        document.getElementById('previewBtn').disabled = false;
+        document.getElementById('importBtn').disabled = false;
+    }
+});
+</script>
+{% endblock %}
