@@ -409,6 +409,9 @@ class ScreeningEngine:
         record.status = status
         record.evaluation_log = log
         
+        # Synchronize candidate status
+        candidate.status = status
+        
         if status == 'rejected':
             # Find first failed step for rejection reason
             for step in log:

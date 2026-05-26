@@ -1,0 +1,3 @@
+JAMB_REG,FULLNAME,STATE,LGA,UTME_SCORE,UTME_ENG,UTME_MATH,UTME_PHY,UTME_CHEM,FIRST_CHOICE,FIRST_COURSE,WAEC_NO,WAEC_YEAR,G1_SUBJECT,G1_GRADE,G2_SUBJECT,G2_GRADE,G3_SUBJECT,G3_GRADE,G4_SUBJECT,G4_GRADE,G5_SUBJECT,G5_GRADE
+1234567890,John Doe Smith,Kano,Kano Municipal,250,75,80,70,65,Confluence University of Science and Technology,Computer Science and Engineering,WAEC123456,2023,English,B3,Mathematics,A1,Physics,B2,Chemistry,B2,Biology,C4
+9876543210,Jane Mary Johnson,Lagos,Ikeja,265,78,85,72,68,Confluence University of Science and Technology,Computer Science and Engineering,WAEC654321,2023,English,B2,Mathematics,A1,Physics,B3,Chemistry,B2,Biology,C5

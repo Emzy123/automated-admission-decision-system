@@ -256,6 +256,8 @@ def override_screening_result(record_id):
     # Update record
     old_status = record.status
     record.status = new_status
+    if record.candidate:
+        record.candidate.status = new_status
     
     # Add override to evaluation log
     if not record.evaluation_log:

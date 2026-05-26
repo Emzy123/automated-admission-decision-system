@@ -151,9 +151,9 @@ def dashboard():
 
     if selected_session:
         total_candidates = Candidate.query.filter_by(session_id=selected_session.id).count()
-        admitted_count = AdmissionRecord.query.filter_by(
-            session_id=selected_session.id,
-            status="admitted",
+        admitted_count = AdmissionRecord.query.filter(
+            AdmissionRecord.session_id == selected_session.id,
+            AdmissionRecord.status.in_(["admitted", "finalized", "accepted"]),
         ).count()
         rejected_count = AdmissionRecord.query.filter_by(
             session_id=selected_session.id,
@@ -168,7 +168,7 @@ def dashboard():
             )
             .filter(
                 AdmissionRecord.session_id == selected_session.id,
-                AdmissionRecord.status == "admitted",
+                AdmissionRecord.status.in_(["admitted", "finalized", "accepted"]),
             )
             .group_by(AdmissionRecord.quota_category)
             .all()
@@ -269,7 +269,7 @@ def candidates():
 
     pagination = query.paginate(page=page, per_page=50, error_out=False)
     programmes = Programme.query.order_by(Programme.name.asc()).all()
-    statuses = [status_row[0] for status_row in db.session.query(Candidate.status).distinct().all() if status_row[0]]
+    statuses = ['pending', 'recommended', 'admitted', 'rejected', 'finalized', 'waiting_list', 'accepted', 'declined']
     quota_categories = [
         category_row[0]
         for category_row in db.session.query(AdmissionRecord.quota_category).distinct().all()
@@ -634,6 +634,44 @@ def bulk_verify_candidates():
 
     flash(f"✅ {count} candidate(s) successfully marked as CAPS Verified.", "success")
     return redirect(url_for("admin.candidates"))
+
+
+@admin_bp.route("/candidates/delete-all", methods=["POST"])
+@login_required
+def delete_all_candidates():
+    if current_user.role not in ["admin", "super_admin"]:
+        flash("Unauthorized action.", "danger")
+        return redirect(url_for("admin.candidates"))
+
+    try:
+        from app.models import MeritListApproval, AdmissionBatch, AdmissionRecord, OLevelResult, User
+        candidate_count = Candidate.query.count()
+        candidate_user_ids = [c.user_id for c in Candidate.query.filter(Candidate.user_id.isnot(None)).all()]
+
+        # Delete dependent records in dependency order
+        MeritListApproval.query.delete()
+        AdmissionBatch.query.delete()
+        AdmissionRecord.query.delete()
+        OLevelResult.query.delete()
+        Candidate.query.delete()
+
+        if candidate_user_ids:
+            User.query.filter(User.id.in_(candidate_user_ids)).delete(synchronize_session=False)
+
+        _log_audit(
+            action="candidates_delete_all",
+            entity_type="Candidate",
+            details={"deleted_count": candidate_count},
+        )
+        db.session.commit()
+
+        flash(f"Successfully deleted all {candidate_count} candidates and their associated records.", "success")
+    except Exception as e:
+        db.session.rollback()
+        flash(f"Failed to delete candidates: {str(e)}", "danger")
+
+    return redirect(url_for("admin.candidates"))
+
 
 
 @admin_bp.route("/candidates/validate-jamb")
@@ -1207,8 +1245,9 @@ def reports():
 
     if active_session:
         total_candidates = Candidate.query.filter_by(session_id=active_session.id).count()
-        admitted_count = AdmissionRecord.query.filter_by(
-            session_id=active_session.id, status="admitted"
+        admitted_count = AdmissionRecord.query.filter(
+            AdmissionRecord.session_id == active_session.id,
+            AdmissionRecord.status.in_(["admitted", "finalized", "accepted"])
         ).count()
         rejected_count = AdmissionRecord.query.filter_by(
             session_id=active_session.id, status="rejected"
@@ -1221,7 +1260,7 @@ def reports():
             )
             .filter(
                 AdmissionRecord.session_id == active_session.id,
-                AdmissionRecord.status == "admitted",
+                AdmissionRecord.status.in_(["admitted", "finalized", "accepted"]),
             )
             .group_by(AdmissionRecord.quota_category)
             .all()

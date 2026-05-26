@@ -30,7 +30,9 @@ def seed_programmes():
         {"name": "Environmental Sciences", "code": "ENV"},
         {"name": "Science and Technology Education", "code": "STE"},
         {"name": "Management and Social Sciences", "code": "MSS"},
-        {"name": "Law", "code": "LAW"}
+        {"name": "Law", "code": "LAW"},
+        {"name": "Agriculture", "code": "AGR"},
+        {"name": "College of Medical Sciences", "code": "CMS"}
     ]
     
     faculties_created = 0
@@ -123,7 +125,19 @@ def seed_programmes():
             {"name": "Transport and Logistics Management", "code": "TLM", "faculty_code": "MSS", "min_utme_score": 160, "total_slots": 60, "merit_slots": 27, "catchment_slots": 21, "elds_slots": 12, "merit_cutoff": 42.0, "catchment_cutoff": 36.0, "elds_cutoff": 30.0, "required_utme_subjects": ["English", "Mathematics", "Economics", "Geography"], "mandatory_olevel_subjects": ["English Language", "Mathematics"]},
             
             # Law (LAW)
-            {"name": "Law", "code": "LAW", "faculty_code": "LAW", "min_utme_score": 200, "total_slots": 120, "merit_slots": 54, "catchment_slots": 42, "elds_slots": 24, "merit_cutoff": 55.0, "catchment_cutoff": 48.0, "elds_cutoff": 42.0, "required_utme_subjects": ["English", "Literature in English", "Government", "Economics/CRS"], "mandatory_olevel_subjects": ["English Language", "Mathematics", "Literature in English", "Government"]}
+            {"name": "Law", "code": "LAW", "faculty_code": "LAW", "min_utme_score": 200, "total_slots": 120, "merit_slots": 54, "catchment_slots": 42, "elds_slots": 24, "merit_cutoff": 55.0, "catchment_cutoff": 48.0, "elds_cutoff": 42.0, "required_utme_subjects": ["English", "Literature in English", "Government", "Economics/CRS"], "mandatory_olevel_subjects": ["English Language", "Mathematics", "Literature in English", "Government"]},
+            
+            # Agriculture (AGR)
+            {"name": "Agriculture", "code": "AGR", "faculty_code": "AGR", "min_utme_score": 150, "total_slots": 80, "merit_slots": 36, "catchment_slots": 28, "elds_slots": 16, "merit_cutoff": 42.0, "catchment_cutoff": 36.0, "elds_cutoff": 30.0, "required_utme_subjects": ["English", "Biology", "Chemistry", "Mathematics/Physics"], "mandatory_olevel_subjects": ["English Language", "Mathematics", "Biology", "Chemistry"]},
+            {"name": "Animal Science", "code": "ANS", "faculty_code": "AGR", "min_utme_score": 150, "total_slots": 50, "merit_slots": 23, "catchment_slots": 17, "elds_slots": 10, "merit_cutoff": 42.0, "catchment_cutoff": 36.0, "elds_cutoff": 30.0, "required_utme_subjects": ["English", "Biology/Agricultural Science", "Chemistry", "Mathematics/Physics"], "mandatory_olevel_subjects": ["English Language", "Mathematics", "Biology"]},
+            {"name": "Crop Science", "code": "CPS", "faculty_code": "AGR", "min_utme_score": 150, "total_slots": 50, "merit_slots": 23, "catchment_slots": 17, "elds_slots": 10, "merit_cutoff": 42.0, "catchment_cutoff": 36.0, "elds_cutoff": 30.0, "required_utme_subjects": ["English", "Biology/Agricultural Science", "Chemistry", "Mathematics/Physics"], "mandatory_olevel_subjects": ["English Language", "Mathematics", "Biology"]},
+            
+            # College of Medical Sciences (CMS)
+            {"name": "Medicine and Surgery", "code": "MBBS", "faculty_code": "CMS", "min_utme_score": 220, "total_slots": 50, "merit_slots": 23, "catchment_slots": 17, "elds_slots": 10, "merit_cutoff": 65.0, "catchment_cutoff": 58.0, "elds_cutoff": 52.0, "required_utme_subjects": ["English", "Biology", "Chemistry", "Physics"], "mandatory_olevel_subjects": ["English Language", "Mathematics", "Biology", "Chemistry", "Physics"]},
+            {"name": "Nursing Science", "code": "NUR", "faculty_code": "CMS", "min_utme_score": 200, "total_slots": 60, "merit_slots": 27, "catchment_slots": 21, "elds_slots": 12, "merit_cutoff": 58.0, "catchment_cutoff": 50.0, "elds_cutoff": 45.0, "required_utme_subjects": ["English", "Biology", "Chemistry", "Physics"], "mandatory_olevel_subjects": ["English Language", "Mathematics", "Biology", "Chemistry", "Physics"]},
+            {"name": "Medical Laboratory Science", "code": "MLS", "faculty_code": "CMS", "min_utme_score": 180, "total_slots": 60, "merit_slots": 27, "catchment_slots": 21, "elds_slots": 12, "merit_cutoff": 52.0, "catchment_cutoff": 45.0, "elds_cutoff": 40.0, "required_utme_subjects": ["English", "Biology", "Chemistry", "Physics"], "mandatory_olevel_subjects": ["English Language", "Mathematics", "Biology", "Chemistry", "Physics"]},
+            {"name": "Human Anatomy", "code": "ANA", "faculty_code": "CMS", "min_utme_score": 160, "total_slots": 50, "merit_slots": 23, "catchment_slots": 17, "elds_slots": 10, "merit_cutoff": 45.0, "catchment_cutoff": 38.0, "elds_cutoff": 32.0, "required_utme_subjects": ["English", "Biology", "Chemistry", "Physics"], "mandatory_olevel_subjects": ["English Language", "Mathematics", "Biology", "Chemistry"]},
+            {"name": "Human Physiology", "code": "PHS", "faculty_code": "CMS", "min_utme_score": 160, "total_slots": 50, "merit_slots": 23, "catchment_slots": 17, "elds_slots": 10, "merit_cutoff": 45.0, "catchment_cutoff": 38.0, "elds_cutoff": 32.0, "required_utme_subjects": ["English", "Biology", "Chemistry", "Physics"], "mandatory_olevel_subjects": ["English Language", "Mathematics", "Biology", "Chemistry"]}
         ]
         
         faculties_created = 0
@@ -245,114 +259,14 @@ def seed_university_config():
 
 def seed_all():
     """Seed database with realistic test data"""
-    # 1. Create Academic Session
-    session = AcademicSession(
-        name="2025/2026",
-        is_active=True,
-        start_date=date(2025, 9, 1),
-        end_date=date(2026, 8, 31)
-    )
-    db.session.add(session)
+    # 1. Seed University Config (Academic Session, University, Catchment, ELDS)
+    seed_university_config()
     
-    # 2. Create University (CUSTECH)
-    university = University(
-        name="Confluence University of Science and Technology, Osara",
-        short_code="CUSTECH",
-        formula_type="CUSTECH",
-        jamb_divisor=8.0,
-        post_utme_divisor=4.0,
-        merit_quota_percent=45,
-        catchment_quota_percent=35,
-        elds_quota_percent=20,
-        min_olevel_credits=5,
-        max_olevel_sittings=2,
-        min_utme_score=140,
-        grade_points={
-            'A1': 8, 'B2': 7, 'B3': 6, 'C4': 5, 
-            'C5': 4, 'C6': 3, 'D7': 0, 'E8': 0, 'F9': 0
-        }
-    )
-    db.session.add(university)
+    # 2. Seed CUSTECH Faculties and Programmes
+    seed_programmes()
     
-    # 3. Add Catchment State (Kogi)
-    catchment = CatchmentState(university_id=1, state_name="Kogi")
-    db.session.add(catchment)
-    
-    # 4. Pre-populate ELDS States
-    elds_states = [
-        "Adamawa", "Bauchi", "Bayelsa", "Benue", "Borno", "Cross River",
-        "Ebonyi", "Gombe", "Jigawa", "Kaduna", "Kano", "Katsina", "Kebbi",
-        "Kogi", "Kwara", "Nasarawa", "Niger", "Plateau", "Rivers", "Sokoto",
-        "Taraba", "Yobe", "Zamfara"
-    ]
-    for state in elds_states:
-        db.session.add(ELDSState(state_name=state))
-    
-    # 5. Create Faculties
-    faculties = [
-        Faculty(university_id=1, name="Computing and Informatics", code="FCI"),
-        Faculty(university_id=1, name="Engineering", code="ENG"),
-        Faculty(university_id=1, name="Science", code="SCI"),
-    ]
-    for faculty in faculties:
-        db.session.add(faculty)
-    
-    db.session.commit()
-    
-    # 6. Create Programmes
-    programmes = [
-        Programme(
-            university_id=1,
-            faculty_id=1,
-            name="Software Engineering",
-            code="SE",
-            duration_years=4,
-            min_utme_score=180,
-            total_slots=100,
-            merit_slots=45,
-            catchment_slots=35,
-            elds_slots=20,
-            merit_cutoff=50.0,
-            catchment_cutoff=40.0,
-            elds_cutoff=35.0,
-            required_utme_subjects=["English", "Mathematics", "Physics", "Chemistry"],
-            mandatory_olevel_subjects=["English Language", "Mathematics", "Physics", "Chemistry"]
-        ),
-        Programme(
-            university_id=1,
-            faculty_id=1,
-            name="Computer Science",
-            code="CSC",
-            duration_years=4,
-            min_utme_score=170,
-            total_slots=80,
-            merit_slots=36,
-            catchment_slots=28,
-            elds_slots=16,
-            merit_cutoff=48.0,
-            catchment_cutoff=38.0,
-            elds_cutoff=33.0,
-            required_utme_subjects=["English", "Mathematics", "Physics", "Chemistry"],
-            mandatory_olevel_subjects=["English Language", "Mathematics", "Physics"]
-        )
-    ]
-    for prog in programmes:
-        db.session.add(prog)
-    
-    db.session.commit()
-    
-    # 7. Create Admin User
-    admin = User(
-        username="admin",
-        email="admin@custech.edu.ng",
-        full_name="System Administrator",
-        role="super_admin",
-        is_active=True
-    )
-    admin.set_password("admin123")  # Change in production!
-    db.session.add(admin)
-    
-    db.session.commit()
+    # 3. Create Admin User
+    create_admin_user()
     
     print("Database seeded successfully!")
 

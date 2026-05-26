@@ -25,7 +25,7 @@ class MeritListGenerator:
             AdmissionRecord.programme_id == self.programme.id,
             AdmissionRecord.session_id == self.session_id,
             AdmissionRecord.quota_category == quota_category,
-            AdmissionRecord.status.in_(['recommended', 'admitted', 'accepted', 'declined'])
+            AdmissionRecord.status.in_(['recommended', 'admitted', 'finalized', 'waiting_list', 'accepted', 'declined'])
         ).options(
             db.joinedload(AdmissionRecord.candidate)
         ).order_by(AdmissionRecord.aggregate_score.desc()).all()
@@ -49,12 +49,21 @@ class MeritListGenerator:
             if record.status == 'recommended':
                 record.status = 'admitted'
                 record.admitted_at = datetime.utcnow()
+            if record.candidate:
+                record.candidate.status = record.status
                 
         # Reset status for waiting list candidates if they were previously admitted
         for record in waiting:
             if record.status == 'admitted':
                 record.status = 'recommended'
                 record.admitted_at = None
+            if record.candidate:
+                record.candidate.status = record.status
+                
+        # Ensure status is synced for declined records as well
+        for record in declined_records:
+            if record.candidate:
+                record.candidate.status = record.status
                 
         try:
             db.session.commit()
@@ -213,48 +222,48 @@ class MeritListGenerator:
         """Get admission statistics for the programme"""
         total_slots = self.programme.total_slots
         
-        # Count admitted candidates by quota
-        admitted_merit = AdmissionRecord.query.filter_by(
-            programme_id=self.programme.id,
-            session_id=self.session_id,
-            status='admitted',
-            quota_category='merit'
+        # Count admitted candidates by quota (admitted, finalized, accepted)
+        admitted_merit = AdmissionRecord.query.filter(
+            AdmissionRecord.programme_id == self.programme.id,
+            AdmissionRecord.session_id == self.session_id,
+            AdmissionRecord.status.in_(['admitted', 'finalized', 'accepted']),
+            AdmissionRecord.quota_category == 'merit'
         ).count()
         
-        admitted_catchment = AdmissionRecord.query.filter_by(
-            programme_id=self.programme.id,
-            session_id=self.session_id,
-            status='admitted',
-            quota_category='catchment'
+        admitted_catchment = AdmissionRecord.query.filter(
+            AdmissionRecord.programme_id == self.programme.id,
+            AdmissionRecord.session_id == self.session_id,
+            AdmissionRecord.status.in_(['admitted', 'finalized', 'accepted']),
+            AdmissionRecord.quota_category == 'catchment'
         ).count()
         
-        admitted_elds = AdmissionRecord.query.filter_by(
-            programme_id=self.programme.id,
-            session_id=self.session_id,
-            status='admitted',
-            quota_category='elds'
+        admitted_elds = AdmissionRecord.query.filter(
+            AdmissionRecord.programme_id == self.programme.id,
+            AdmissionRecord.session_id == self.session_id,
+            AdmissionRecord.status.in_(['admitted', 'finalized', 'accepted']),
+            AdmissionRecord.quota_category == 'elds'
         ).count()
         
-        # Count recommended candidates by quota
-        recommended_merit = AdmissionRecord.query.filter_by(
-            programme_id=self.programme.id,
-            session_id=self.session_id,
-            status='recommended',
-            quota_category='merit'
+        # Count recommended candidates by quota (recommended, waiting_list)
+        recommended_merit = AdmissionRecord.query.filter(
+            AdmissionRecord.programme_id == self.programme.id,
+            AdmissionRecord.session_id == self.session_id,
+            AdmissionRecord.status.in_(['recommended', 'waiting_list']),
+            AdmissionRecord.quota_category == 'merit'
         ).count()
         
-        recommended_catchment = AdmissionRecord.query.filter_by(
-            programme_id=self.programme.id,
-            session_id=self.session_id,
-            status='recommended',
-            quota_category='catchment'
+        recommended_catchment = AdmissionRecord.query.filter(
+            AdmissionRecord.programme_id == self.programme.id,
+            AdmissionRecord.session_id == self.session_id,
+            AdmissionRecord.status.in_(['recommended', 'waiting_list']),
+            AdmissionRecord.quota_category == 'catchment'
         ).count()
         
-        recommended_elds = AdmissionRecord.query.filter_by(
-            programme_id=self.programme.id,
-            session_id=self.session_id,
-            status='recommended',
-            quota_category='elds'
+        recommended_elds = AdmissionRecord.query.filter(
+            AdmissionRecord.programme_id == self.programme.id,
+            AdmissionRecord.session_id == self.session_id,
+            AdmissionRecord.status.in_(['recommended', 'waiting_list']),
+            AdmissionRecord.quota_category == 'elds'
         ).count()
         
         total_filled = admitted_merit + admitted_catchment + admitted_elds
@@ -288,19 +297,27 @@ class MeritListGenerator:
     def finalize_list(self) -> bool:
         """Finalize the merit list and prevent further changes"""
         try:
-            # Update all admitted records to finalized status
-            AdmissionRecord.query.filter_by(
+            # Update all admitted records to finalized status in database and sync candidates
+            admitted_records = AdmissionRecord.query.filter_by(
                 programme_id=self.programme.id,
                 session_id=self.session_id,
                 status='admitted'
-            ).update({'status': 'finalized'})
+            ).all()
+            for record in admitted_records:
+                record.status = 'finalized'
+                if record.candidate:
+                    record.candidate.status = 'finalized'
             
-            # Update all recommended but not admitted to waiting list
-            AdmissionRecord.query.filter_by(
+            # Update all recommended but not admitted to waiting list in database and sync candidates
+            recommended_records = AdmissionRecord.query.filter_by(
                 programme_id=self.programme.id,
                 session_id=self.session_id,
                 status='recommended'
-            ).update({'status': 'waiting_list'})
+            ).all()
+            for record in recommended_records:
+                record.status = 'waiting_list'
+                if record.candidate:
+                    record.candidate.status = 'waiting_list'
             
             db.session.commit()
             return True

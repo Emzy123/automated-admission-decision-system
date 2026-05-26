@@ -67,6 +67,653 @@ admission_system/
 |-- .gitignore                   # Git ignore file
 ```
 
+### System Diagrams
+
+The diagrams below use Mermaid syntax and can be rendered directly by GitHub, GitLab, VS Code Mermaid extensions, and most Markdown documentation tools.
+
+#### Flowchart Notation Standard
+
+```mermaid
+flowchart LR
+    Terminator([Start / End])
+    Process[Process]
+    Decision{Decision}
+    InputOutput[/Input or Output/]
+    DataStore[(Data Store)]
+    Connector((Connector))
+```
+
+#### 1. High-Level System Architecture
+
+```mermaid
+flowchart TB
+    subgraph Users["System Users"]
+        CandidateUser["Candidate"]
+        AdminUser["Admin"]
+        AdmissionOfficer["Admission Officer"]
+        FacultyOfficer["Faculty Officer"]
+    end
+
+    subgraph WebApp["Flask Web Application"]
+        Templates["Jinja2 Templates"]
+        StaticAssets["Static Assets<br/>CSS / JS / Images"]
+        Blueprints["Blueprint Routes<br/>auth, admin, admission, api, reports, candidate"]
+        Forms["WTForms Validation"]
+        Services["Business Services"]
+    end
+
+    subgraph ServiceLayer["Service Layer"]
+        ScreeningEngine["ScreeningEngine"]
+        CandidateProcessor["Candidate Processor"]
+        MeritListGenerator["MeritListGenerator"]
+        ReportGenerator["Report Generator"]
+        MockCaps["Mock JAMB CAPS"]
+        CapsSync["CAPS Sync"]
+    end
+
+    subgraph Persistence["Persistence Layer"]
+        SQLAlchemy["SQLAlchemy ORM"]
+        Database[("Application Database")]
+        Uploads[("Uploads Directory")]
+        Migrations["Flask-Migrate / Alembic"]
+    end
+
+    Users --> Templates
+    Templates --> Blueprints
+    StaticAssets --> Templates
+    Blueprints --> Forms
+    Blueprints --> Services
+    Services --> ServiceLayer
+    ServiceLayer --> SQLAlchemy
+    Blueprints --> SQLAlchemy
+    SQLAlchemy --> Database
+    Migrations --> Database
+    CandidateProcessor --> Uploads
+    ReportGenerator --> Uploads
+    MockCaps --> CapsSync
+```
+
+#### 2. Application Component Diagram
+
+```mermaid
+flowchart LR
+    RunPy["run.py"] --> Factory["create_app()"]
+    Factory --> Extensions["Extensions<br/>SQLAlchemy, Migrate, CSRF, LoginManager"]
+    Factory --> Context["Global Context Processor"]
+    Factory --> ErrorHandlers["Error Handlers"]
+    Factory --> CLI["CLI Commands"]
+    Factory --> Celery["Celery App"]
+    Factory --> Router["register_blueprints()"]
+
+    Router --> Auth["auth_bp"]
+    Router --> Admin["admin_bp"]
+    Router --> Admission["admission_bp<br/>/admission"]
+    Router --> API["api_bp"]
+    Router --> Reports["reports_bp"]
+    Router --> Candidate["candidate_bp"]
+
+    Auth --> UserModel["User"]
+    Admin --> Models["SQLAlchemy Models"]
+    Admission --> Screening["ScreeningEngine"]
+    Admission --> Merit["MeritListGenerator"]
+    API --> Models
+    Reports --> ReportService["Report Generator"]
+    Candidate --> CandidateModel["Candidate"]
+```
+
+#### 3. UML Class Diagram
+
+```mermaid
+classDiagram
+    class AcademicSession {
+        int id
+        string name
+        bool is_active
+        date start_date
+        date end_date
+    }
+
+    class University {
+        int id
+        string name
+        string short_code
+        string formula_type
+        float jamb_divisor
+        float post_utme_divisor
+        float merit_quota_percent
+        float catchment_quota_percent
+        float elds_quota_percent
+        int min_olevel_credits
+        int max_olevel_sittings
+        int min_utme_score
+        get_grade_point(grade)
+    }
+
+    class Faculty {
+        int id
+        int university_id
+        string name
+        string code
+    }
+
+    class Programme {
+        int id
+        int university_id
+        int faculty_id
+        string name
+        string code
+        int total_slots
+        int merit_slots
+        int catchment_slots
+        int elds_slots
+        float merit_cutoff
+        float catchment_cutoff
+        float elds_cutoff
+        allocate_quota_slots()
+    }
+
+    class Candidate {
+        int id
+        string jamb_reg_number
+        string full_name
+        string state_of_origin
+        int utme_score
+        float post_utme_score
+        bool post_utme_present
+        string status
+    }
+
+    class OLevelResult {
+        int id
+        string exam_body
+        int exam_year
+        int sitting_number
+        string subject
+        string grade
+    }
+
+    class AdmissionRule {
+        int id
+        string rule_name
+        string condition_field
+        string operator
+        string value
+        string logic_group
+        bool is_active
+        int priority
+    }
+
+    class AdmissionRecord {
+        int id
+        bool utme_cutoff_passed
+        bool subject_combination_passed
+        bool olevel_credits_passed
+        bool olevel_sittings_passed
+        string quota_category
+        float aggregate_score
+        string status
+        string rejection_reason
+        bool dept_approved
+        bool faculty_approved
+        bool senate_approved
+        mark_department_approval()
+    }
+
+    class AdmissionBatch {
+        int id
+        string batch_name
+        string quota_category
+        int total_candidates
+        int admitted_count
+        int rejected_count
+        update_counts()
+    }
+
+    class MeritListApproval {
+        int id
+        bool department_approved
+        bool faculty_approved
+        bool senate_approved
+        bool finalized
+        can_approve(user, level)
+        approve(user, level)
+    }
+
+    class User {
+        int id
+        string username
+        string email
+        string full_name
+        string role
+        bool is_active
+        set_password(password)
+        check_password(password)
+    }
+
+    class AuditLog {
+        int id
+        string action
+        string entity_type
+        int entity_id
+        json details
+        string ip_address
+        datetime timestamp
+    }
+
+    class CatchmentState {
+        int id
+        string state_name
+    }
+
+    class ELDSState {
+        int id
+        string state_name
+        seed_defaults()
+    }
+
+    AcademicSession "1" --> "many" Candidate
+    AcademicSession "1" --> "many" AdmissionRecord
+    AcademicSession "1" --> "many" AdmissionBatch
+    University "1" --> "many" Faculty
+    University "1" --> "many" Programme
+    University "1" --> "many" CatchmentState
+    Faculty "1" --> "many" Programme
+    Faculty "1" --> "many" User
+    Programme "1" --> "many" AdmissionRule
+    Programme "1" --> "many" AdmissionRecord
+    Programme "1" --> "many" AdmissionBatch
+    Programme "1" --> "many" Candidate : first_choice
+    Candidate "1" --> "many" OLevelResult
+    Candidate "1" --> "many" AdmissionRecord
+    User "1" --> "many" AuditLog
+    User "1" --> "many" AdmissionRecord : approver
+    MeritListApproval --> Programme
+    MeritListApproval --> AcademicSession
+    MeritListApproval --> User : approvers
+```
+
+#### 4. Entity Relationship Diagram
+
+```mermaid
+erDiagram
+    ACADEMIC_SESSIONS ||--o{ CANDIDATES : contains
+    ACADEMIC_SESSIONS ||--o{ ADMISSION_RECORDS : records
+    ACADEMIC_SESSIONS ||--o{ ADMISSION_BATCHES : batches
+    ACADEMIC_SESSIONS ||--o{ MERIT_LIST_APPROVALS : approves
+
+    UNIVERSITIES ||--o{ FACULTIES : has
+    UNIVERSITIES ||--o{ PROGRAMMES : offers
+    UNIVERSITIES ||--o{ CATCHMENT_STATES : defines
+
+    FACULTIES ||--o{ PROGRAMMES : manages
+    FACULTIES ||--o{ USERS : assigns
+
+    PROGRAMMES ||--o{ ADMISSION_RULES : configures
+    PROGRAMMES ||--o{ ADMISSION_RECORDS : evaluates
+    PROGRAMMES ||--o{ ADMISSION_BATCHES : groups
+    PROGRAMMES ||--o{ MERIT_LIST_APPROVALS : submits
+    PROGRAMMES ||--o{ CANDIDATES : first_choice
+    PROGRAMMES ||--o{ CANDIDATES : second_choice
+
+    CANDIDATES ||--o{ OLEVEL_RESULTS : owns
+    CANDIDATES ||--o{ ADMISSION_RECORDS : receives
+    USERS ||--o{ AUDIT_LOGS : performs
+    USERS ||--o{ ADMISSION_RECORDS : approves
+    USERS ||--o{ ADMISSION_BATCHES : processes
+```
+
+#### 5. Candidate Screening Activity Diagram
+
+```mermaid
+flowchart TD
+    Start([Start]) --> InputCandidate[/Candidate selected for screening/]
+    InputCandidate --> LoadContext[Load candidate, university, programme, and session]
+    LoadContext --> CandidateStore[(Application database)]
+    CandidateStore --> CheckUTME{Does UTME score meet cutoff?}
+
+    CheckUTME -- No --> RejectUTME[Create rejected admission record]
+    RejectUTME --> ReasonUTME[/Rejection reason: utme_cutoff/]
+    ReasonUTME --> End([End])
+
+    CheckUTME -- Yes --> CheckSubjects{Are required UTME subjects present?}
+    CheckSubjects -- No --> RejectSubjects[Create rejected admission record]
+    RejectSubjects --> ReasonSubjects[/Rejection reason: subject_combination/]
+    ReasonSubjects --> End
+
+    CheckSubjects -- Yes --> CheckCredits{Are minimum O'Level credits and mandatory subjects passed?}
+    CheckCredits -- No --> RejectCredits[Create rejected admission record]
+    RejectCredits --> ReasonCredits[/Rejection reason: olevel_credits/]
+    ReasonCredits --> End
+
+    CheckCredits -- Yes --> CheckSittings{Are O'Level sittings within allowed limit?}
+    CheckSittings -- No --> RejectSittings[Create rejected admission record]
+    RejectSittings --> ReasonSittings[/Rejection reason: olevel_sittings/]
+    ReasonSittings --> End
+
+    CheckSittings -- Yes --> Aggregate[Calculate aggregate score]
+    Aggregate --> Quota[Classify quota category]
+    Quota --> Rules[Evaluate active programme rules]
+    Rules --> Cutoff{Does aggregate meet quota cutoff?}
+
+    Cutoff -- No --> RejectCutoff[Create or update rejected admission record]
+    RejectCutoff --> ReasonCutoff[/Rejection reason: quota cutoff not met/]
+    ReasonCutoff --> End
+
+    Cutoff -- Yes --> Recommend[Create or update recommended admission record]
+    Recommend --> OutputDecision[/Screening result: status, quota, score, evaluation log/]
+    OutputDecision --> End
+```
+
+#### 6. Screening Sequence Diagram
+
+```mermaid
+sequenceDiagram
+    actor Officer as Admission Officer
+    participant Route as Admission Route
+    participant Engine as ScreeningEngine
+    participant DB as Database
+    participant Record as AdmissionRecord
+
+    Officer->>Route: Start candidate/batch screening
+    Route->>DB: Load programme, session, candidate IDs
+    Route->>Engine: screen_candidate(candidate)
+    Engine->>DB: Read university and programme rules
+    Engine->>Engine: Check UTME cutoff
+    Engine->>Engine: Check subject combination
+    Engine->>DB: Read O'Level results
+    Engine->>Engine: Check credits and sittings
+    Engine->>Engine: Calculate aggregate score
+    Engine->>DB: Read catchment and ELDS states
+    Engine->>Engine: Classify quota category
+    Engine->>DB: Read active AdmissionRule rows
+    Engine->>Engine: Evaluate dynamic rules
+    Engine->>Record: Create or update decision
+    Record->>DB: Flush AdmissionRecord
+    Engine-->>Route: Return status, quota, aggregate, log
+    Route-->>Officer: Display screening result
+```
+
+#### 7. Merit List and Quota Allocation Flow
+
+```mermaid
+flowchart TD
+    Start([Start]) --> InputSelection[/Programme and academic session selected/]
+    InputSelection --> LoadRecords[Load eligible admission records]
+    LoadRecords --> RecordsStore[(AdmissionRecord table)]
+    RecordsStore --> HasRecords{Are eligible records available?}
+    HasRecords -- No --> EmptyOutput[/Return empty merit list/]
+    EmptyOutput --> End([End])
+
+    HasRecords -- Yes --> SplitQuota[Split records by quota category]
+    SplitQuota --> Merit[Prepare merit quota list]
+    SplitQuota --> Catchment[Prepare catchment quota list]
+    SplitQuota --> ELDS[Prepare ELDS quota list]
+
+    Merit --> RankMerit[Rank merit candidates by aggregate score]
+    Catchment --> RankCatchment[Rank catchment candidates by aggregate score]
+    ELDS --> RankELDS[Rank ELDS candidates by aggregate score]
+
+    RankMerit --> MeritSlots[Apply merit slot limit]
+    RankCatchment --> CatchmentSlots[Apply catchment slot limit]
+    RankELDS --> ELDSSlots[Apply ELDS slot limit]
+
+    MeritSlots --> UpdateStatus[Update admitted and waiting statuses]
+    CatchmentSlots --> UpdateStatus
+    ELDSSlots --> UpdateStatus
+    UpdateStatus --> Persist[Commit database changes]
+    Persist --> Output[/Return admitted lists, waiting lists, and cutoffs/]
+    Output --> End
+```
+
+#### 8. Multi-Level Approval State Diagram
+
+```mermaid
+stateDiagram-v2
+    [*] --> Generated: Merit list generated
+    Generated --> DepartmentApproved: Department approval
+    DepartmentApproved --> FacultyApproved: Faculty approval
+    FacultyApproved --> SenateApproved: Senate approval
+    SenateApproved --> Finalized: finalized = true
+    Finalized --> CAPSUploaded: Upload/push to CAPS
+    CAPSUploaded --> Accepted: Candidate accepts offer
+    CAPSUploaded --> Declined: Candidate declines offer
+    Accepted --> LetterGenerated: Admission letter generated
+    Declined --> WaitingListReplacement: Slot released
+    WaitingListReplacement --> Generated: Regenerate list
+```
+
+#### 9. Candidate Portal Use Case Diagram
+
+```mermaid
+flowchart LR
+    Candidate["Candidate"]
+    Admin["Admin"]
+    FacultyOfficer["Faculty Officer"]
+    AdmissionOfficer["Admission Officer"]
+
+    subgraph UseCases["System Use Cases"]
+        Login["Login / Logout"]
+        ManageData["Manage candidate data"]
+        VerifyCAPS["Verify CAPS data"]
+        ConfigureRules["Configure admission rules"]
+        RunScreening["Run screening"]
+        GenerateMerit["Generate merit list"]
+        ApproveList["Approve merit list"]
+        ViewStatus["View admission status"]
+        AcceptDecline["Accept or decline admission"]
+        GenerateLetter["Generate admission letter"]
+        Reports["View reports and analytics"]
+    end
+
+    Candidate --> Login
+    Candidate --> ViewStatus
+    Candidate --> AcceptDecline
+    Candidate --> GenerateLetter
+
+    Admin --> Login
+    Admin --> ManageData
+    Admin --> VerifyCAPS
+    Admin --> ConfigureRules
+    Admin --> RunScreening
+    Admin --> GenerateMerit
+    Admin --> ApproveList
+    Admin --> Reports
+
+    AdmissionOfficer --> Login
+    AdmissionOfficer --> ManageData
+    AdmissionOfficer --> VerifyCAPS
+    AdmissionOfficer --> RunScreening
+    AdmissionOfficer --> GenerateMerit
+    AdmissionOfficer --> ApproveList
+    AdmissionOfficer --> Reports
+
+    FacultyOfficer --> Login
+    FacultyOfficer --> ApproveList
+    FacultyOfficer --> Reports
+```
+
+#### 10. System Use Case Diagram
+
+```mermaid
+flowchart LR
+    CandidateActor["Candidate"]
+    AdminActor["Admin"]
+    AdmissionActor["Admission Officer"]
+    FacultyActor["Faculty Officer"]
+    SenateActor["Senate / Final Approver"]
+    MockCapsActor["Mock JAMB CAPS"]
+
+    subgraph AADS["Automated Admission Decision System"]
+        UCLogin(("Authenticate user"))
+        UCSubmitData(("Submit / update candidate data"))
+        UCViewStatus(("View admission status"))
+        UCAcceptOffer(("Accept or decline admission"))
+        UCGenerateLetter(("Generate admission letter"))
+
+        UCManageUsers(("Manage users and roles"))
+        UCManageProgrammes(("Manage faculties and programmes"))
+        UCConfigureRules(("Configure admission rules"))
+        UCConfigureQuotas(("Configure quotas and cutoffs"))
+        UCVerifyCandidates(("Verify candidate data"))
+        UCRunScreening(("Run rule-based screening"))
+        UCGenerateMerit(("Generate merit list"))
+        UCApproveDepartment(("Approve at department level"))
+        UCApproveFaculty(("Approve at faculty level"))
+        UCApproveSenate(("Approve at senate level"))
+        UCPushCaps(("Upload admission list to CAPS"))
+        UCCapsStatus(("Check CAPS upload status"))
+        UCReports(("View reports and analytics"))
+        UCAudit(("View audit trail"))
+    end
+
+    CandidateActor --> UCLogin
+    CandidateActor --> UCSubmitData
+    CandidateActor --> UCViewStatus
+    CandidateActor --> UCAcceptOffer
+    CandidateActor --> UCGenerateLetter
+
+    AdminActor --> UCLogin
+    AdminActor --> UCManageUsers
+    AdminActor --> UCManageProgrammes
+    AdminActor --> UCConfigureRules
+    AdminActor --> UCConfigureQuotas
+    AdminActor --> UCVerifyCandidates
+    AdminActor --> UCRunScreening
+    AdminActor --> UCGenerateMerit
+    AdminActor --> UCApproveDepartment
+    AdminActor --> UCApproveFaculty
+    AdminActor --> UCApproveSenate
+    AdminActor --> UCPushCaps
+    AdminActor --> UCCapsStatus
+    AdminActor --> UCReports
+    AdminActor --> UCAudit
+
+    AdmissionActor --> UCLogin
+    AdmissionActor --> UCVerifyCandidates
+    AdmissionActor --> UCRunScreening
+    AdmissionActor --> UCGenerateMerit
+    AdmissionActor --> UCApproveDepartment
+    AdmissionActor --> UCPushCaps
+    AdmissionActor --> UCCapsStatus
+    AdmissionActor --> UCReports
+
+    FacultyActor --> UCLogin
+    FacultyActor --> UCApproveFaculty
+    FacultyActor --> UCReports
+
+    SenateActor --> UCLogin
+    SenateActor --> UCApproveSenate
+    SenateActor --> UCReports
+
+    MockCapsActor --> UCVerifyCandidates
+    MockCapsActor --> UCPushCaps
+    MockCapsActor --> UCCapsStatus
+    MockCapsActor --> UCAcceptOffer
+
+    UCRunScreening -. includes .-> UCVerifyCandidates
+    UCGenerateMerit -. includes .-> UCRunScreening
+    UCPushCaps -. requires .-> UCApproveSenate
+    UCGenerateLetter -. requires .-> UCAcceptOffer
+```
+
+#### 11. Route to Service Dependency Diagram
+
+```mermaid
+flowchart TB
+    subgraph Routes["Blueprint Routes"]
+        AuthRoute["auth.py"]
+        AdminRoute["admin.py"]
+        AdmissionRoute["admission.py"]
+        ApiRoute["api.py"]
+        CandidateRoute["candidate.py"]
+        ReportsRoute["reports.py"]
+    end
+
+    subgraph Services["Services"]
+        ScreeningEngine["screening_engine.py"]
+        CandidateProcessor["candidate_processor.py"]
+        MeritList["merit_list.py"]
+        MockCaps["mock_caps.py"]
+        CapsSync["caps_sync.py"]
+        ReportGenerator["report_generator.py"]
+    end
+
+    subgraph Models["Models"]
+        User["User"]
+        Candidate["Candidate"]
+        Programme["Programme"]
+        AdmissionRecord["AdmissionRecord"]
+        AdmissionRule["AdmissionRule"]
+        AcademicSession["AcademicSession"]
+        AuditLog["AuditLog"]
+    end
+
+    AuthRoute --> User
+    AdminRoute --> Candidate
+    AdminRoute --> Programme
+    AdminRoute --> AdmissionRule
+    AdmissionRoute --> ScreeningEngine
+    AdmissionRoute --> MeritList
+    ApiRoute --> Candidate
+    ApiRoute --> Programme
+    CandidateRoute --> Candidate
+    CandidateRoute --> AdmissionRecord
+    ReportsRoute --> ReportGenerator
+
+    ScreeningEngine --> Candidate
+    ScreeningEngine --> Programme
+    ScreeningEngine --> AdmissionRule
+    ScreeningEngine --> AdmissionRecord
+    CandidateProcessor --> Candidate
+    MeritList --> AdmissionRecord
+    MeritList --> Programme
+    MockCaps --> Candidate
+    CapsSync --> AdmissionRecord
+    ReportGenerator --> AdmissionRecord
+    ReportGenerator --> AcademicSession
+    AdminRoute --> AuditLog
+```
+
+#### 12. Deployment Diagram
+
+```mermaid
+flowchart TB
+    Browser["User Browser"] --> HTTP["HTTP/HTTPS"]
+    HTTP --> FlaskServer["Flask Application Server<br/>python run.py / WSGI"]
+
+    FlaskServer --> Templates["Jinja2 Templates"]
+    FlaskServer --> Static["Static Files"]
+    FlaskServer --> UploadDir["Upload Directory"]
+    FlaskServer --> DB[("Database<br/>SQLite or DATABASE_URL")]
+    FlaskServer --> Migrations["Alembic Migrations"]
+
+    subgraph OptionalAsync["Optional Background Processing"]
+        CeleryWorker["Celery Worker"]
+        Broker["Message Broker"]
+    end
+
+    FlaskServer -. schedules .-> Broker
+    Broker -. dispatches .-> CeleryWorker
+    CeleryWorker -. reads/writes .-> DB
+```
+
+#### 13. Data Flow Diagram
+
+```mermaid
+flowchart LR
+    CandidateData[/Candidate data<br/>Bio-data, UTME, O'Level, Post-UTME/] --> Validation[Validate form or upload data]
+    Validation --> CandidateStore[(Candidate and OLevelResult tables)]
+    CandidateStore --> Screening[Run screening engine]
+    RuleConfig[/Programme criteria and admission rules/] --> Screening
+    UniversityConfig[/University quotas, cutoffs, grade points/] --> Screening
+    Screening --> DecisionStore[(AdmissionRecord table)]
+    DecisionStore --> MeritGeneration[Generate merit list]
+    MeritGeneration --> Approval[Process department, faculty, and senate approval]
+    Approval --> CAPS[/Mock JAMB CAPS sync/]
+    Approval --> Reports[/Reports and analytics/]
+    Approval --> CandidatePortal[/Candidate status and admission letter/]
+```
+
 ### Key Features
 
 #### 1. Rule-Based Screening

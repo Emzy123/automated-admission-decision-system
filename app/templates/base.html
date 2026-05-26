@@ -437,27 +437,8 @@ function confirmAction() {
     }
 }
 
-// Sidebar functionality
-function toggleSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-    sidebar.classList.toggle('collapsed');
-    overlay.classList.toggle('show');
-}
-
-function closeSidebar() {
-    const sidebar = document.getElementById('sidebar');
-    const overlay = document.getElementById('sidebarOverlay');
-    sidebar.classList.remove('collapsed');
-    overlay.classList.remove('show');
-}
-
 // Auto-loading for forms and buttons
 document.addEventListener('DOMContentLoaded', function() {
-    // Sidebar toggle
-    document.getElementById('sidebarToggle').addEventListener('click', toggleSidebar);
-    document.getElementById('sidebarClose').addEventListener('click', closeSidebar);
-    document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
 
     // Active navigation highlighting
     const currentPath = window.location.pathname;

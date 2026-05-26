@@ -112,21 +112,38 @@ function toggleSidebar() {
     const footer = document.querySelector('.app-footer');
     const overlay = document.getElementById('sidebarOverlay');
     
-    if (sidebar && mainContent) {
-        const isCollapsed = sidebar.classList.contains('collapsed');
+    if (sidebar) {
+        const isMobile = window.innerWidth <= 768;
         
-        if (isCollapsed) {
-            // Show sidebar
+        if (isMobile) {
+            // Mobile: toggle 'show' on sidebar and overlay
+            const isShown = sidebar.classList.contains('show');
+            if (isShown) {
+                sidebar.classList.remove('show');
+                if (overlay) overlay.classList.remove('show');
+            } else {
+                sidebar.classList.add('show');
+                if (overlay) overlay.classList.add('show');
+            }
+            // Ensure desktop classes don't cause styling conflicts on mobile
             sidebar.classList.remove('collapsed');
-            mainContent.classList.remove('expanded');
+            if (mainContent) mainContent.classList.remove('expanded');
             if (footer) footer.classList.remove('expanded');
-            overlay.classList.remove('show');
         } else {
-            // Hide sidebar
-            sidebar.classList.add('collapsed');
-            mainContent.classList.add('expanded');
-            if (footer) footer.classList.add('expanded');
-            overlay.classList.add('show');
+            // Desktop: toggle 'collapsed' on sidebar and 'expanded' on content/footer
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            if (isCollapsed) {
+                sidebar.classList.remove('collapsed');
+                if (mainContent) mainContent.classList.remove('expanded');
+                if (footer) footer.classList.remove('expanded');
+            } else {
+                sidebar.classList.add('collapsed');
+                if (mainContent) mainContent.classList.add('expanded');
+                if (footer) footer.classList.add('expanded');
+            }
+            // Ensure mobile classes are removed on desktop
+            sidebar.classList.remove('show');
+            if (overlay) overlay.classList.remove('show');
         }
     }
 }
@@ -138,10 +155,16 @@ function closeSidebar() {
     const overlay = document.getElementById('sidebarOverlay');
     
     if (sidebar) {
-        sidebar.classList.add('collapsed');
-        if (mainContent) mainContent.classList.add('expanded');
-        if (footer) footer.classList.add('expanded');
-        if (overlay) overlay.classList.remove('show');
+        const isMobile = window.innerWidth <= 768;
+        
+        if (isMobile) {
+            sidebar.classList.remove('show');
+            if (overlay) overlay.classList.remove('show');
+        } else {
+            sidebar.classList.add('collapsed');
+            if (mainContent) mainContent.classList.add('expanded');
+            if (footer) footer.classList.add('expanded');
+        }
     }
 }
 
@@ -152,17 +175,26 @@ function handleResponsiveSidebar() {
         const sidebar = document.getElementById('sidebar');
         const mainContent = document.querySelector('.main-content');
         const footer = document.querySelector('.app-footer');
+        const overlay = document.getElementById('sidebarOverlay');
         
         if (e.matches) {
-            // Mobile: hide sidebar by default
-            if (sidebar) sidebar.classList.add('collapsed');
-            if (mainContent) mainContent.classList.add('expanded');
-            if (footer) footer.classList.add('expanded');
-        } else {
-            // Desktop: show sidebar by default
-            if (sidebar) sidebar.classList.remove('collapsed');
+            // Mobile view: hide sidebar by default
+            if (sidebar) {
+                sidebar.classList.remove('show');
+                sidebar.classList.remove('collapsed');
+            }
             if (mainContent) mainContent.classList.remove('expanded');
             if (footer) footer.classList.remove('expanded');
+            if (overlay) overlay.classList.remove('show');
+        } else {
+            // Desktop view: show sidebar by default
+            if (sidebar) {
+                sidebar.classList.remove('collapsed');
+                sidebar.classList.remove('show');
+            }
+            if (mainContent) mainContent.classList.remove('expanded');
+            if (footer) footer.classList.remove('expanded');
+            if (overlay) overlay.classList.remove('show');
         }
     }
     

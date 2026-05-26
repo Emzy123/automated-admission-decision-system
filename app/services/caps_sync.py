@@ -201,7 +201,7 @@ class CAPSSyncService:
         """Get candidates pending CAPS verification"""
         candidates = Candidate.query.filter(
             Candidate.caps_verified == False,
-            Candidate.status.in_(['pending', 'verified'])
+            Candidate.status.in_(['pending', 'verified', 'recommended', 'admitted', 'finalized', 'waiting_list', 'accepted'])
         ).all()
         
         return [

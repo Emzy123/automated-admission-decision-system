@@ -120,8 +120,8 @@ class CandidateProcessor:
         if not jamb_reg:
             return False, "JAMB registration number is required."
         cleaned = str(jamb_reg).strip().upper()
-        if not _re.match(r'^\d{10}$', cleaned):
-            return False, f"Invalid JAMB reg format: expected 10 digits, got '{cleaned}'."
+        if not _re.match(r'^[A-Z0-9]{10}$', cleaned):
+            return False, f"Invalid JAMB reg format: expected 10 alphanumeric characters, got '{cleaned}'."
         return True, cleaned
 
     def normalize_columns(self, df):
@@ -171,11 +171,11 @@ class CandidateProcessor:
         if errors:
             raise ValueError(f"Invalid JAMB format: {'; '.join(errors)}")
         
-        # Validate JAMB reg format (must be 10 digits)
+        # Validate JAMB reg format (must be 10 alphanumeric characters)
         invalid_regs = []
         for idx, reg in enumerate(df['JAMB_REG']):
-            reg_str = str(reg).strip()
-            if not re.match(r'^\d{10}$', reg_str):
+            reg_str = str(reg).strip().upper()
+            if not re.match(r'^[A-Z0-9]{10}$', reg_str):
                 invalid_regs.append(f"Row {idx+2}: {reg_str}")
         
         if invalid_regs:
@@ -285,20 +285,142 @@ class CandidateProcessor:
                 
                 # Common course name mappings
                 course_mappings = {
-                    'software eng': 'Software Engineering',
+                    # Computing and Informatics
                     'software engineering': 'Software Engineering',
+                    'software eng': 'Software Engineering',
                     'computer science': 'Computer Science',
                     'computer sci': 'Computer Science',
                     'cyber security': 'Cyber Security',
                     'cybersec': 'Cyber Security',
                     'information technology': 'Information Technology',
                     'i.t': 'Information Technology',
-                    'electrical engineering': 'Electrical Engineering',
-                    'elect eng': 'Electrical Engineering',
-                    'mechanical engineering': 'Mechanical Engineering',
-                    'mech eng': 'Mechanical Engineering',
+                    
+                    # Engineering
+                    'agricultural engineering': 'Agricultural Engineering',
+                    'agricultural eng': 'Agricultural Engineering',
+                    'agric eng': 'Agricultural Engineering',
+                    'chemical engineering': 'Chemical Engineering',
+                    'chemical eng': 'Chemical Engineering',
+                    'chemical engr': 'Chemical Engineering',
+                    'chem eng': 'Chemical Engineering',
+                    'chem engr': 'Chemical Engineering',
+                    'civil and mining engineering': 'Civil and Mining Engineering',
+                    'civil and mining eng': 'Civil and Mining Engineering',
+                    'civil engineering': 'Civil and Mining Engineering',
+                    'civil eng': 'Civil and Mining Engineering',
+                    'civil engr': 'Civil and Mining Engineering',
                     'computer engineering': 'Computer Engineering',
                     'comp eng': 'Computer Engineering',
+                    'comp engr': 'Computer Engineering',
+                    'electrical engineering': 'Electrical Engineering',
+                    'elect eng': 'Electrical Engineering',
+                    'elect engr': 'Electrical Engineering',
+                    'marine engineering': 'Marine Engineering',
+                    'marine eng': 'Marine Engineering',
+                    'marine engr': 'Marine Engineering',
+                    'materials and metallurgical engineering': 'Materials and Metallurgical Engineering',
+                    'materials and metallurgical eng': 'Materials and Metallurgical Engineering',
+                    'materials & metallurgical': 'Materials and Metallurgical Engineering',
+                    'materials engineering': 'Materials and Metallurgical Engineering',
+                    'materials eng': 'Materials and Metallurgical Engineering',
+                    'mechanical engineering': 'Mechanical Engineering',
+                    'mech eng': 'Mechanical Engineering',
+                    'mech engr': 'Mechanical Engineering',
+                    'mechatronics engineering': 'Mechatronics Engineering',
+                    'mechatronics eng': 'Mechatronics Engineering',
+                    'mechatronics engr': 'Mechatronics Engineering',
+                    'mechatronics': 'Mechatronics Engineering',
+                    'petroleum and gas engineering': 'Petroleum and Gas Engineering',
+                    'petroleum and gas eng': 'Petroleum and Gas Engineering',
+                    'petroleum & gas': 'Petroleum and Gas Engineering',
+                    'petroleum engineering': 'Petroleum and Gas Engineering',
+                    'petroleum eng': 'Petroleum and Gas Engineering',
+                    'pet eng': 'Petroleum and Gas Engineering',
+                    'pet engr': 'Petroleum and Gas Engineering',
+                    
+                    # Science
+                    'biology': 'Biology',
+                    'biochemistry': 'Biochemistry',
+                    'biochem': 'Biochemistry',
+                    'chemistry': 'Chemistry',
+                    'mathematics': 'Mathematics',
+                    'maths': 'Mathematics',
+                    'math': 'Mathematics',
+                    'microbiology': 'Microbiology',
+                    'microbio': 'Microbiology',
+                    'physics': 'Physics',
+                    'statistics': 'Statistics',
+                    'stats': 'Statistics',
+                    
+                    # Environmental Sciences
+                    'architecture': 'Architecture',
+                    'arch': 'Architecture',
+                    'building': 'Building',
+                    'geography': 'Geography',
+                    'geo': 'Geography',
+                    'surveying and geo-information': 'Surveying and Geo-information',
+                    'surveying & geo-information': 'Surveying and Geo-information',
+                    'surveying': 'Surveying and Geo-information',
+                    'urban and regional planning': 'Urban and Regional Planning',
+                    'urban & regional planning': 'Urban and Regional Planning',
+                    'urp': 'Urban and Regional Planning',
+                    
+                    # Science and Technology Education
+                    'biology education': 'Biology Education',
+                    'biology ed': 'Biology Education',
+                    'chemistry education': 'Chemistry Education',
+                    'chemistry ed': 'Chemistry Education',
+                    'mathematics education': 'Mathematics Education',
+                    'mathematics ed': 'Mathematics Education',
+                    'physics education': 'Physics Education',
+                    'physics ed': 'Physics Education',
+                    'computer education': 'Computer Education',
+                    'computer ed': 'Computer Education',
+                    'geography education': 'Geography Education',
+                    'geography ed': 'Geography Education',
+                    'technology education': 'Technology Education',
+                    'technology ed': 'Technology Education',
+                    
+                    # Management and Social Sciences
+                    'accounting': 'Accounting',
+                    'accountancy': 'Accounting',
+                    'actuarial science': 'Actuarial Science',
+                    'actuarial': 'Actuarial Science',
+                    'business administration': 'Business Administration',
+                    'business admin': 'Business Administration',
+                    'economics': 'Economics',
+                    'human resource management': 'Human Resource Management',
+                    'human resource': 'Human Resource Management',
+                    'human resources': 'Human Resource Management',
+                    'hrm': 'Human Resource Management',
+                    'transport and logistics management': 'Transport and Logistics Management',
+                    'transport & logistics': 'Transport and Logistics Management',
+                    'transport and logistics': 'Transport and Logistics Management',
+                    
+                    # Law
+                    'law': 'Law',
+                    
+                    # Agriculture
+                    'agriculture': 'Agriculture',
+                    'agric': 'Agriculture',
+                    'animal science': 'Animal Science',
+                    'crop science': 'Crop Science',
+                    
+                    # College of Medical Sciences
+                    'medicine and surgery': 'Medicine and Surgery',
+                    'medicine & surgery': 'Medicine and Surgery',
+                    'medicine': 'Medicine and Surgery',
+                    'mbbs': 'Medicine and Surgery',
+                    'nursing science': 'Nursing Science',
+                    'nursing': 'Nursing Science',
+                    'medical laboratory science': 'Medical Laboratory Science',
+                    'medical lab science': 'Medical Laboratory Science',
+                    'medical lab': 'Medical Laboratory Science',
+                    'mls': 'Medical Laboratory Science',
+                    'human anatomy': 'Human Anatomy',
+                    'anatomy': 'Human Anatomy',
+                    'human physiology': 'Human Physiology',
+                    'physiology': 'Human Physiology',
                 }
                 
                 # Try course mappings
@@ -371,10 +493,10 @@ class CandidateProcessor:
     
     def process_jamb_row(self, row, session_id):
         """Process a single JAMB CSV row into database records"""
-        jamb_reg = str(row['JAMB_REG']).strip()
+        jamb_reg = str(row['JAMB_REG']).strip().upper()
         
         # Validate JAMB reg
-        if not re.match(r'^\d{10}$', jamb_reg):
+        if not re.match(r'^[A-Z0-9]{10}$', jamb_reg):
             self.errors.append(f"Invalid JAMB reg: {jamb_reg}")
             self.skipped_count += 1
             return None

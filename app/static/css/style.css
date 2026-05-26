@@ -1791,7 +1791,7 @@ table#candidateTable thead th:nth-child(8) {
         transform: translateX(-100%);
     }
     
-    .sidebar.collapsed {
+    .sidebar.show {
         transform: translateX(0);
     }
     
