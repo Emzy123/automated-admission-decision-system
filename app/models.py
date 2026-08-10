@@ -92,6 +92,9 @@ class University(db.Model):
     min_olevel_credits = db.Column(db.Integer, nullable=False, default=5)
     max_olevel_sittings = db.Column(db.Integer, nullable=False, default=2)
     min_utme_score = db.Column(db.Integer, nullable=False, default=140)
+    primary_color = db.Column(db.String(7), nullable=True, default="#1a3a5c")
+    secondary_color = db.Column(db.String(7), nullable=True, default="#2563eb")
+    logo_url = db.Column(db.String(500), nullable=True)
 
     catchment_states = db.relationship(
         "CatchmentState",

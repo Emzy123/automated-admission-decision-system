@@ -1,7 +1,11 @@
 import pandas as pd
 import re
 from datetime import datetime
+from werkzeug.security import generate_password_hash
 from app.models import db, Candidate, OLevelResult, Programme, University, User
+
+DEFAULT_PASSWORD_HASH = generate_password_hash('password')
+
 
 class CandidateProcessor:
     """Processes JAMB-format CSV and standard CSV candidate uploads"""
@@ -29,7 +33,7 @@ class CandidateProcessor:
         ],
         # Full name
         'FULLNAME': [
-            'FULLNAME', 'FULL NAME', 'CANDIDATE NAME', 'NAME', 'CANDIDATE_NAME',
+            'FULLNAME', 'FULL NAME', 'FULL_NAME', 'CANDIDATE NAME', 'NAME', 'CANDIDATE_NAME',
             'APPLICANT NAME', 'APPLICANT_NAME', 'STUDENT NAME', 'STUDENT_NAME',
         ],
         # State
@@ -111,6 +115,8 @@ class CandidateProcessor:
         self.created_count = 0
         self.updated_count = 0
         self.skipped_count = 0
+        self.existing_jamb_regs = None
+        self.existing_usernames = None
 
     def validate_jamb_reg(self, jamb_reg):
         """Validate a JAMB registration number string.
@@ -439,7 +445,47 @@ class CandidateProcessor:
                         Programme.university_id == university.id,
                         Programme.name.ilike(f"%{course_name}%")
                     ).first()
-                
+
+                # Last resort: auto-create the programme so no candidate is dropped
+                if not programme and course_name:
+                    from app.models import Faculty
+                    # Ensure a fallback faculty exists
+                    faculty = Faculty.query.filter_by(
+                        university_id=university.id, name='General'
+                    ).first()
+                    if not faculty:
+                        faculty = Faculty(
+                            university_id=university.id,
+                            name='General',
+                            code='GEN'
+                        )
+                        db.session.add(faculty)
+                        db.session.flush()
+
+                    # Derive a short unique code from the course name
+                    raw_code = ''.join(w[0].upper() for w in course_name.split())[:6]
+                    code = raw_code
+                    suffix = 1
+                    while Programme.query.filter_by(
+                        university_id=university.id, code=code
+                    ).first():
+                        code = f'{raw_code[:5]}{suffix}'
+                        suffix += 1
+
+                    programme = Programme(
+                        university_id=university.id,
+                        faculty_id=faculty.id,
+                        name=course_name,
+                        code=code,
+                        total_slots=100,
+                        min_utme_score=university.min_utme_score or 140,
+                    )
+                    db.session.add(programme)
+                    db.session.flush()
+                    self.warnings.append(
+                        f"Auto-created programme '{course_name}' (code: {code})"
+                    )
+
                 if programme:
                     result['programme_id'] = programme.id
                 else:
@@ -448,6 +494,7 @@ class CandidateProcessor:
                 self.warnings.append(f"University not found: {institution_name}")
         
         return result
+
     
     def create_applicant_account(self, candidate):
         """Create applicant account for candidate with default password 'password'"""
@@ -460,30 +507,35 @@ class CandidateProcessor:
                 email = f"{name_parts}.{candidate.jamb_reg_number}@applicant.custech.edu.ng"
                 candidate.email = email
             
-            # Check if user account already exists
-            existing_user = User.query.filter_by(username=candidate.jamb_reg_number).first()
-            if existing_user:
-                # Link existing user to candidate if not already linked
-                if not candidate.user_id:
-                    candidate.user_id = existing_user.id
-                return existing_user
+            # Check if user account already exists (using in-memory cache if available)
+            if self.existing_usernames is not None:
+                if candidate.jamb_reg_number in self.existing_usernames:
+                    return None
+            else:
+                existing_user = User.query.filter_by(username=candidate.jamb_reg_number).first()
+                if existing_user:
+                    if not candidate.user_id:
+                        candidate.user_id = existing_user.id
+                    return existing_user
             
-            # Create new user account
+            # Create new user account with pre-hashed default password for maximum speed
             user = User(
                 username=candidate.jamb_reg_number,
                 email=email,
+                password_hash=DEFAULT_PASSWORD_HASH,
                 full_name=candidate.full_name,
                 role='candidate',
                 is_active=True,
                 created_at=datetime.utcnow()
             )
-            user.set_password('password')  # Default password for all applicants
             
             db.session.add(user)
             db.session.flush()  # Get user.id
             
             # Link user to candidate
             candidate.user_id = user.id
+            if self.existing_usernames is not None:
+                self.existing_usernames.add(candidate.jamb_reg_number)
             
             return user
             
@@ -502,10 +554,15 @@ class CandidateProcessor:
             return None
         
         # Check if candidate already exists
-        existing = Candidate.query.filter_by(jamb_reg_number=jamb_reg).first()
-        if existing:
-            self.skipped_count += 1
-            return existing
+        if self.existing_jamb_regs is not None:
+            if jamb_reg in self.existing_jamb_regs:
+                self.skipped_count += 1
+                return None
+        else:
+            existing = Candidate.query.filter_by(jamb_reg_number=jamb_reg).first()
+            if existing:
+                self.skipped_count += 1
+                return existing
         
         # Parse data
         utme_subjects = self.parse_utme_subjects(row)
@@ -516,25 +573,24 @@ class CandidateProcessor:
             import random
             
             # Simulate Post-UTME score for testing purposes if the format doesn't provide it
-            # Typically 80-90% of candidates take the post-UTME
             post_utme_present = random.random() < 0.85
             post_utme_score = round(random.uniform(35.0, 95.0), 1) if post_utme_present else None
 
             # Create candidate
             candidate = Candidate(
-            session_id=session_id,
-            jamb_reg_number=jamb_reg,
-            full_name=str(row.get('FULLNAME', '')).strip(),
-            state_of_origin=str(row.get('STATE', '')).strip(),
-            lga_of_origin=str(row.get('LGA', '')).strip() if pd.notna(row.get('LGA')) else '',
-            utme_score=int(float(row['UTME_SCORE'])) if pd.notna(row.get('UTME_SCORE')) else 0,
-            utme_subjects=utme_subjects,
-            first_choice_programme_id=first_choice.get('programme_id'),
-            post_utme_present=post_utme_present,
-            post_utme_score=post_utme_score,
-            status='pending',
-            created_at=datetime.utcnow()
-        )
+                session_id=session_id,
+                jamb_reg_number=jamb_reg,
+                full_name=str(row.get('FULLNAME', '')).strip(),
+                state_of_origin=str(row.get('STATE', '')).strip(),
+                lga_of_origin=str(row.get('LGA', '')).strip() if pd.notna(row.get('LGA')) else '',
+                utme_score=int(float(row['UTME_SCORE'])) if pd.notna(row.get('UTME_SCORE')) else 0,
+                utme_subjects=utme_subjects,
+                first_choice_programme_id=first_choice.get('programme_id'),
+                post_utme_present=post_utme_present,
+                post_utme_score=post_utme_score,
+                status='pending',
+                created_at=datetime.utcnow()
+            )
             db.session.add(candidate)
             db.session.flush()  # Get candidate.id
             
@@ -549,12 +605,13 @@ class CandidateProcessor:
             # Automatically create applicant account
             self.create_applicant_account(candidate)
             
+            if self.existing_jamb_regs is not None:
+                self.existing_jamb_regs.add(jamb_reg)
+
             self.created_count += 1
             return candidate
             
         except Exception as e:
-            # Rollback the current transaction to prevent session corruption
-            db.session.rollback()
             self.errors.append(f"Failed to process candidate {jamb_reg}: {str(e)}")
             return None
     
@@ -562,7 +619,8 @@ class CandidateProcessor:
         """Main method: Process uploaded CSV file"""
         df = pd.read_csv(file_path)
         
-        # Detect format
+        # Detect format and normalize column names
+        df = self.normalize_columns(df)
         if not self.is_jamb_format(df):
             raise ValueError(
                 "File is not in JAMB format. Expected columns: JAMB_REG, UTME_ENG, UTME_MATH, G1_SUBJECT, etc."
@@ -571,7 +629,11 @@ class CandidateProcessor:
         # Validate
         self.validate_jamb_csv(df)
         
-        # Process each row with better error handling
+        # Pre-cache existing records to eliminate thousands of per-row SQL queries
+        self.existing_jamb_regs = {reg for (reg,) in db.session.query(Candidate.jamb_reg_number).all()}
+        self.existing_usernames = {u for (u,) in db.session.query(User.username).all()}
+
+        # Process each row
         successful_rows = 0
         for idx, row in df.iterrows():
             try:
@@ -581,20 +643,19 @@ class CandidateProcessor:
             except Exception as e:
                 self.errors.append(f"Row {idx+2}: {str(e)}")
                 self.skipped_count += 1
-                # Continue processing other rows even if one fails
         
-        # Only commit if we have successful rows and no critical errors
+        # Single commit at end of batch
         if successful_rows > 0:
             try:
                 db.session.commit()
             except Exception as e:
                 db.session.rollback()
                 self.errors.append(f"Failed to commit changes: {str(e)}")
-                # Mark all successful rows as failed due to commit failure
                 self.created_count = 0
                 self.skipped_count += successful_rows
         
         return self.get_summary()
+
     
     def get_preview(self, file_path, max_rows=5):
         """Return preview data for display before import"""

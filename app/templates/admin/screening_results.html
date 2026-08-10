@@ -1,17 +1,17 @@
 {% extends "base.html" %}
-{% block title %}Screening Results{% endblock %}
+{% block title %}Admission Process Analytics Report{% endblock %}
 {% block content %}
+<!-- Include Chart.js for Visual Analytics -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
 <style>
-    /* Maximum contrast overrides for screening results table */
+    /* Print & High Contrast Styling for Analytics Report Page */
     body .screening-results-page {
         background-color: #ffffff !important;
         color: #000000 !important;
     }
     
-    /* Force all text to be black with maximum specificity */
     body .screening-results-page *,
-    body .screening-results-page * *,
-    body .screening-results-page * * *,
     body .screening-results-page div,
     body .screening-results-page span,
     body .screening-results-page p,
@@ -26,12 +26,31 @@
     body .screening-results-page label,
     body .screening-results-page input,
     body .screening-results-page select,
-    body .screening-results-page textarea,
     body .screening-results-page code {
         color: #000000 !important;
     }
     
-    /* Table headers with high contrast */
+    .report-card {
+        border: 2px solid #333333 !important;
+        border-radius: 8px !important;
+        background-color: #ffffff !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05) !important;
+    }
+    
+    .kpi-title {
+        font-size: 0.85rem !important;
+        font-weight: 800 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        color: #495057 !important;
+    }
+    
+    .kpi-val {
+        font-size: 2rem !important;
+        font-weight: 900 !important;
+        line-height: 1.1 !important;
+    }
+
     body .screening-results-page .table th {
         background-color: #f0f0f0 !important;
         color: #000000 !important;
@@ -39,7 +58,6 @@
         border: 2px solid #333333 !important;
     }
     
-    /* Table cells with high contrast */
     body .screening-results-page .table td {
         background-color: #ffffff !important;
         color: #000000 !important;
@@ -47,229 +65,218 @@
         font-weight: 700 !important;
     }
     
-    /* Programme column specifically */
-    body .screening-results-page .table td:nth-child(6) {
-        color: #000000 !important;
-        font-weight: 900 !important;
-        background-color: #ffffcc !important;
-    }
-    
-    /* Session column specifically */
-    body .screening-results-page .table td:nth-child(7) {
-        color: #000000 !important;
-        font-weight: 900 !important;
-        background-color: #ccffcc !important;
-    }
-    
-    /* Status column specifically */
-    body .screening-results-page .table td:nth-child(8) {
-        color: #000000 !important;
-        font-weight: 900 !important;
-        background-color: #ffccff !important;
-    }
-    
-    /* Status badges with maximum contrast */
     body .screening-results-page .badge {
         font-weight: 900 !important;
-        border: 2px solid #000000 !important;
+        border: 1.5px solid #000000 !important;
     }
-    
-    body .screening-results-page .badge.bg-success {
-        background-color: #006600 !important;
-        color: #ffffff !important;
-    }
-    
-    body .screening-results-page .badge.bg-danger {
-        background-color: #cc0000 !important;
-        color: #ffffff !important;
-    }
-    
-    body .screening-results-page .badge.bg-primary {
-        background-color: #0066cc !important;
-        color: #ffffff !important;
-    }
-    
-    body .screening-results-page .badge.bg-info {
-        background-color: #0066cc !important;
-        color: #ffffff !important;
-    }
-    
-    body .screening-results-page .badge.bg-warning {
-        background-color: #ff9900 !important;
-        color: #000000 !important;
-    }
-    
-    /* Form elements with high contrast */
-    body .screening-results-page .form-control,
-    body .screening-results-page .form-select {
-        background-color: #ffffff !important;
-        color: #000000 !important;
-        border: 2px solid #000000 !important;
-        font-weight: 700 !important;
-    }
-    
-    /* Links with high contrast */
-    body .screening-results-page a {
-        color: #0000cc !important;
-        font-weight: 900 !important;
-        text-decoration: underline !important;
-    }
-    
-    /* Headers */
-    body .screening-results-page h1,
-    body .screening-results-page h2,
-    body .screening-results-page h3,
-    body .screening-results-page h4,
-    body .screening-results-page h5 {
-        color: #000000 !important;
-        font-weight: 900 !important;
-        background-color: #ffffff !important;
-    }
-    
-    /* Card headers */
-    body .screening-results-page .card-header {
-        background-color: #f0f0f0 !important;
-        color: #000000 !important;
-        border: 2px solid #000000 !important;
-    }
-    
-    /* Card bodies */
-    body .screening-results-page .card-body {
-        background-color: #ffffff !important;
-        color: #000000 !important;
-        border: 1px solid #666666 !important;
-    }
-    
-    /* Buttons */
-    body .screening-results-page .btn {
-        font-weight: 900 !important;
-        border: 2px solid #000000 !important;
-    }
-    
-    body .screening-results-page .btn-primary {
-        background-color: #0066cc !important;
-        color: #ffffff !important;
-    }
-    
-    body .screening-results-page .btn-outline-secondary {
-        background-color: #ffffff !important;
-        color: #000000 !important;
-    }
-    
-    body .screening-results-page .btn-outline-primary {
-        background-color: #ffffff !important;
-        color: #0066cc !important;
-        border-color: #0066cc !important;
-    }
-    
-    body .screening-results-page .btn-success {
-        background-color: #006600 !important;
-        color: #ffffff !important;
-    }
-    
-    body .screening-results-page .btn-sm {
-        font-size: 0.8rem !important;
-        padding: 0.25rem 0.5rem !important;
+
+    @media print {
+        .no-print, nav, header, aside, .app-footer, .btn, .breadcrumb {
+            display: none !important;
+        }
+        .main-content {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+        .report-card {
+            border: 1px solid #000 !important;
+            break-inside: avoid !important;
+        }
     }
 </style>
 
 <div class="screening-results-page">
-<nav aria-label="breadcrumb" class="mb-3">
+<nav aria-label="breadcrumb" class="mb-3 no-print">
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}" style="color: var(--primary, #005a9c);">Dashboard</a></li>
-        <li class="breadcrumb-item"><a href="{{ url_for('admin.candidates') }}" style="color: var(--primary, #005a9c);">Candidates</a></li>
-        <li class="breadcrumb-item active" aria-current="page" style="color: var(--text-secondary, #6c757d);">Screening Results</li>
+        <li class="breadcrumb-item"><a href="{{ url_for('admission.screening_dashboard') }}" style="color: var(--primary, #005a9c);">Screening</a></li>
+        <li class="breadcrumb-item active" aria-current="page" style="color: var(--text-secondary, #6c757d);">Analytic Report</li>
     </ol>
 </nav>
 
-<div class="d-flex justify-content-between align-items-center mb-3">
+<!-- Header & Action Bar -->
+<div class="d-flex justify-content-between align-items-center mb-4 pb-3 border-bottom border-2">
     <div>
-        <h1 class="h3 mb-1">Screening Results</h1>
-        <p class="text-muted mb-0">
-            {{ programme.name }} ({{ programme.code }}) - {{ session.name }}
+        <div class="d-flex align-items-center gap-2 mb-1">
+            <span class="badge bg-primary text-white">ADMISSION ANALYTICS REPORT</span>
+            <span class="text-muted fw-bold small">Batch ID: #{{ batch.id }}</span>
+        </div>
+        <h1 class="h2 mb-1 fw-black" style="color: #000000 !important;">Admission Engine Detailed Report</h1>
+        <p class="text-muted mb-0 fw-semibold" style="color: #495057 !important;">
+            <i class="fa-solid fa-graduation-cap me-1"></i> <strong>Programme:</strong> {{ programme.name }} ({{ programme.code }}) 
+            <span class="mx-2">|</span> 
+            <i class="fa-solid fa-calendar-check me-1"></i> <strong>Session:</strong> {{ session.name }}
+            <span class="mx-2">|</span>
+            <i class="fa-solid fa-clock me-1"></i> <strong>Run Date:</strong> {{ batch.processed_at.strftime('%Y-%m-%d %H:%M:%S') if batch.processed_at else 'N/A' }}
         </p>
     </div>
-    <div class="d-flex gap-2">
-        <button class="btn btn-outline-secondary btn-sm" onclick="exportResults()">
-            <i class="fa-solid fa-download me-1"></i>Export
+    <div class="d-flex gap-2 no-print">
+        <button class="btn btn-outline-secondary btn-sm font-weight-bold" onclick="window.print()">
+            <i class="fa-solid fa-print me-1"></i>Print Report
         </button>
-        <a href="{{ url_for('admin.candidates') }}" class="btn btn-primary btn-sm">
-            <i class="fa-solid fa-arrow-left me-1"></i>Back to Candidates
+        <button class="btn btn-outline-success btn-sm font-weight-bold" onclick="exportResults()">
+            <i class="fa-solid fa-file-excel me-1"></i>Export CSV
+        </button>
+        <a href="{{ url_for('admission.screening_dashboard') }}" class="btn btn-primary btn-sm font-weight-bold">
+            <i class="fa-solid fa-arrow-left me-1"></i>Back to Screening
         </a>
     </div>
 </div>
 
-<!-- Summary Cards -->
+<!-- Executive Summary KPI Cards -->
 <div class="row g-3 mb-4">
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body text-center">
-                <div class="h1 mb-1 text-primary">{{ results.total }}</div>
-                <div class="text-muted">Total Candidates</div>
+    <div class="col-md-3">
+        <div class="card report-card h-100">
+            <div class="card-body p-3 text-center">
+                <div class="kpi-title mb-1">Total Candidates Evaluated</div>
+                <div class="kpi-val text-dark mb-1">{{ results.total }}</div>
+                <small class="text-muted fw-bold">100% Processed</small>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body text-center">
-                <div class="h1 mb-1 text-success">{{ results.admitted }}</div>
-                <div class="text-muted">Recommended</div>
-                <div class="small text-muted">{{ ((results.admitted / results.total) * 100)|round(1) }}%</div>
+    <div class="col-md-3">
+        <div class="card report-card h-100" style="border-top: 5px solid #006600 !important;">
+            <div class="card-body p-3 text-center">
+                <div class="kpi-title text-success mb-1">Recommended for Admission</div>
+                <div class="kpi-val text-success mb-1">{{ results.admitted }}</div>
+                <span class="badge bg-success text-white">{{ analytics.admission_rate }}% Admission Rate</span>
             </div>
         </div>
     </div>
-    <div class="col-md-4">
-        <div class="card border-0 shadow-sm h-100">
-            <div class="card-body text-center">
-                <div class="h1 mb-1 text-danger">{{ results.rejected }}</div>
-                <div class="text-muted">Not Recommended</div>
-                <div class="small text-muted">{{ ((results.rejected / results.total) * 100)|round(1) }}%</div>
+    <div class="col-md-3">
+        <div class="card report-card h-100" style="border-top: 5px solid #cc0000 !important;">
+            <div class="card-body p-3 text-center">
+                <div class="kpi-title text-danger mb-1">Not Recommended / Rejected</div>
+                <div class="kpi-val text-danger mb-1">{{ results.rejected }}</div>
+                <small class="text-danger fw-bold">{{ (100 - analytics.admission_rate)|round(1) }}% Unsuccessful</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card report-card h-100" style="border-top: 5px solid #0066cc !important;">
+            <div class="card-body p-3 text-center">
+                <div class="kpi-title text-primary mb-1">Average Aggregate Score</div>
+                <div class="kpi-val text-primary mb-1">{{ analytics.avg_score }}</div>
+                <small class="text-muted fw-bold">Max: {{ analytics.highest_score }} | Min: {{ analytics.lowest_score }}</small>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Filter Options -->
-<div class="card border-0 shadow-sm mb-3">
-    <div class="card-body">
-        <div class="row g-2 align-items-center">
-            <div class="col-auto">
-                <label class="form-label mb-0">Filter:</label>
+<!-- Quota Distribution Bar -->
+<div class="card report-card mb-4">
+    <div class="card-header bg-light fw-bold py-2" style="border-bottom: 2px solid #000;">
+        <i class="fa-solid fa-chart-pie me-2"></i>Quota Allocations Breakdown (Recommended Candidates)
+    </div>
+    <div class="card-body p-3">
+        <div class="row align-items-center text-center">
+            <div class="col-md-4 border-end">
+                <span class="badge bg-primary text-white mb-1">MERIT QUOTA</span>
+                <h3 class="fw-black mb-0" style="color: #0066cc !important;">{{ analytics.quota_counts.merit }}</h3>
+                <small class="text-muted fw-bold">Open Merit Candidates</small>
             </div>
-            <div class="col-auto">
-                <div class="btn-group" role="group">
+            <div class="col-md-4 border-end">
+                <span class="badge bg-info text-white mb-1">CATCHMENT AREA</span>
+                <h3 class="fw-black mb-0" style="color: #0088cc !important;">{{ analytics.quota_counts.catchment }}</h3>
+                <small class="text-muted fw-bold">Catchment States Candidates</small>
+            </div>
+            <div class="col-md-4">
+                <span class="badge bg-warning text-dark mb-1">ELDS QUOTA</span>
+                <h3 class="fw-black mb-0" style="color: #cc6600 !important;">{{ analytics.quota_counts.elds }}</h3>
+                <small class="text-muted fw-bold">Educationally Less Developed</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Visual Analytics Charts Section -->
+<div class="row g-4 mb-4">
+    <!-- Chart 1: Outcome Doughnut -->
+    <div class="col-md-6">
+        <div class="card report-card h-100">
+            <div class="card-header bg-light fw-bold py-2" style="border-bottom: 2px solid #000;">
+                <i class="fa-solid fa-chart-pie me-2"></i>Admission Recommendation Outcome
+            </div>
+            <div class="card-body p-3 d-flex justify-content-center align-items-center" style="min-height: 260px;">
+                <canvas id="outcomeChart" style="max-height: 240px;"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Chart 2: Score Distribution Histogram -->
+    <div class="col-md-6">
+        <div class="card report-card h-100">
+            <div class="card-header bg-light fw-bold py-2" style="border-bottom: 2px solid #000;">
+                <i class="fa-solid fa-chart-column me-2"></i>Aggregate Score Distribution
+            </div>
+            <div class="card-body p-3 d-flex justify-content-center align-items-center" style="min-height: 260px;">
+                <canvas id="scoreChart" style="max-height: 240px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 3: Quota Allocation -->
+    <div class="col-md-6">
+        <div class="card report-card h-100">
+            <div class="card-header bg-light fw-bold py-2" style="border-bottom: 2px solid #000;">
+                <i class="fa-solid fa-chart-bar me-2"></i>Quota Category Distribution
+            </div>
+            <div class="card-body p-3 d-flex justify-content-center align-items-center" style="min-height: 260px;">
+                <canvas id="quotaChart" style="max-height: 240px;"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart 4: Geographic Distribution -->
+    <div class="col-md-6">
+        <div class="card report-card h-100">
+            <div class="card-header bg-light fw-bold py-2" style="border-bottom: 2px solid #000;">
+                <i class="fa-solid fa-map-location-dot me-2"></i>State of Origin Representation (Top 10)
+            </div>
+            <div class="card-body p-3 d-flex justify-content-center align-items-center" style="min-height: 260px;">
+                <canvas id="stateChart" style="max-height: 240px;"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Detailed Candidate Results Table -->
+<div class="card report-card mb-4">
+    <div class="card-header bg-light py-3" style="border-bottom: 2px solid #000;">
+        <div class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <h5 class="mb-0 fw-bold"><i class="fa-solid fa-list-check me-2"></i>Candidate Evaluation Records</h5>
+            </div>
+            <div class="col-md-4 text-md-center">
+                <div class="btn-group btn-group-sm" role="group">
                     <input type="radio" class="btn-check" name="statusFilter" id="filterAll" value="all" checked>
-                    <label class="btn btn-outline-primary" for="filterAll">All ({{ results.total }})</label>
+                    <label class="btn btn-outline-primary font-weight-bold" for="filterAll">All ({{ results.total }})</label>
                     
                     <input type="radio" class="btn-check" name="statusFilter" id="filterAdmitted" value="recommended">
-                    <label class="btn btn-outline-success" for="filterAdmitted">Recommended ({{ results.admitted }})</label>
+                    <label class="btn btn-outline-success font-weight-bold" for="filterAdmitted">Recommended ({{ results.admitted }})</label>
                     
                     <input type="radio" class="btn-check" name="statusFilter" id="filterRejected" value="rejected">
-                    <label class="btn btn-outline-danger" for="filterRejected">Not Recommended ({{ results.rejected }})</label>
+                    <label class="btn btn-outline-danger font-weight-bold" for="filterRejected">Rejected ({{ results.rejected }})</label>
                 </div>
             </div>
-            <div class="col-auto">
-                <input type="text" class="form-control form-control-sm" id="searchResults" placeholder="Search by name or JAMB reg...">
+            <div class="col-md-4">
+                <input type="text" class="form-control form-control-sm" id="searchResults" placeholder="Search candidate name or JAMB reg...">
             </div>
         </div>
     </div>
-</div>
-
-<!-- Results Table -->
-<div class="card border-0 shadow-sm">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0" id="resultsTable">
-            <thead class="table-light">
+            <thead>
                 <tr>
-                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" role="button" data-sort-index="0" class="text-nowrap">JAMB Reg <i class="fa-solid fa-sort small"></i></th>
-                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" role="button" data-sort-index="1" class="text-nowrap">Full Name <i class="fa-solid fa-sort small"></i></th>
-                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" role="button" data-sort-index="2" class="text-nowrap">State <i class="fa-solid fa-sort small"></i></th>
-                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" role="button" data-sort-index="3" class="text-nowrap">UTME <i class="fa-solid fa-sort small"></i></th>
-                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" role="button" data-sort-index="4" class="text-nowrap">Post-UTME <i class="fa-solid fa-sort small"></i></th>
-                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" class="text-nowrap">Programme</th>
-                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" class="text-nowrap">Session</th>
-                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" class="text-nowrap">Status</th>
-                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" class="text-end text-nowrap">Actions</th>
+                    <th style="background-color: #f0f0f0 !important; color: #000 !important; font-weight: 900 !important;">JAMB Reg</th>
+                    <th style="background-color: #f0f0f0 !important; color: #000 !important; font-weight: 900 !important;">Full Name</th>
+                    <th style="background-color: #f0f0f0 !important; color: #000 !important; font-weight: 900 !important;">State</th>
+                    <th style="background-color: #f0f0f0 !important; color: #000 !important; font-weight: 900 !important;">UTME</th>
+                    <th style="background-color: #f0f0f0 !important; color: #000 !important; font-weight: 900 !important;">Post-UTME</th>
+                    <th style="background-color: #f0f0f0 !important; color: #000 !important; font-weight: 900 !important;">Aggregate</th>
+                    <th style="background-color: #f0f0f0 !important; color: #000 !important; font-weight: 900 !important;">Quota</th>
+                    <th style="background-color: #f0f0f0 !important; color: #000 !important; font-weight: 900 !important;">Status</th>
+                    <th style="background-color: #f0f0f0 !important; color: #000 !important; font-weight: 900 !important;" class="text-end">Log Details</th>
                 </tr>
             </thead>
             <tbody>
@@ -277,113 +284,94 @@
                 <tr data-status="{{ result.status }}" 
                     data-name="{{ result.candidate_name|default('')|lower }}"
                     data-jamb="{{ result.jamb_reg|default('')|lower }}">
-                    <td style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">
-                        <code style="color: #000000 !important; background-color: #f0f0f0 !important; border: 1px solid #000000 !important; padding: 4px !important; font-weight: 700 !important;">{{ result.jamb_reg|default('N/A') }}</code>
-                    </td>
-                    <td style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">
-                        {% if result.candidate_name %}
-                            {{ result.candidate_name }}
-                        {% else %}
-                            <span style="color: #999999 !important; font-weight: 700 !important;">Candidate #{{ result.candidate_id }}</span>
-                        {% endif %}
-                    </td>
-                    <td style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">{{ result.state_of_origin|default('N/A') }}</td>
-                    <td style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">{{ result.utme_score|default('N/A') }}</td>
-                    <td style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">
+                    <td><code>{{ result.jamb_reg|default('N/A') }}</code></td>
+                    <td class="fw-bold">{{ result.candidate_name|default('Candidate #' ~ result.candidate_id) }}</td>
+                    <td>{{ result.state_of_origin|default('N/A') }}</td>
+                    <td><span class="badge bg-primary text-white">{{ result.utme_score|default('N/A') }}</span></td>
+                    <td>
                         {% if result.post_utme_score %}
-                            {{ "%.1f"|format(result.post_utme_score) }}
+                            <span class="badge bg-info text-white">{{ "%.1f"|format(result.post_utme_score) }}</span>
                         {% else %}
-                            <span style="color: #999999 !important; font-weight: 700 !important;">Not taken</span>
+                            <span class="badge bg-secondary">N/A</span>
                         {% endif %}
                     </td>
-                    <td style="color: #000000 !important; background-color: #ffffcc !important; font-weight: 900 !important;">
-                        {% if result.programme_name %}
-                            {{ result.programme_name }} ({{ result.programme_code|default('') }})
+                    <td><strong class="text-primary fs-6">{{ "%.2f"|format(result.aggregate_score) if result.aggregate_score else 'N/A' }}</strong></td>
+                    <td>
+                        {% if result.quota_category %}
+                            <span class="badge bg-secondary text-white">{{ result.quota_category|upper }}</span>
                         {% else %}
-                            <span style="color: #000000 !important; font-weight: 700 !important;">Not assigned</span>
+                            <span class="text-muted">-</span>
                         {% endif %}
                     </td>
-                    <td style="color: #000000 !important; background-color: #ccffcc !important; font-weight: 900 !important;">
-                        {% if result.session_name %}
-                            {{ result.session_name }}
-                        {% else %}
-                            <span style="color: #000000 !important; font-weight: 700 !important;">Not assigned</span>
-                        {% endif %}
-                    </td>
-                    <td style="color: #000000 !important; background-color: #ffccff !important; font-weight: 900 !important;">
-                        <span class="badge {{ 'bg-success' if result.status == 'recommended' else 'bg-danger' }}">
+                    <td>
+                        <span class="badge {{ 'bg-success text-white' if result.status == 'recommended' else 'bg-danger text-white' }}">
                             {{ 'Recommended' if result.status == 'recommended' else 'Not Recommended' }}
                         </span>
                     </td>
-                    <td class="text-end text-nowrap" style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">
-                        <button type="button" class="btn btn-sm btn-outline-secondary me-1 toggle-details-btn" data-index="{{ loop.index0 }}">
-                            <i class="fa-solid fa-chevron-down"></i>
+                    <td class="text-end">
+                        <button type="button" class="btn btn-sm btn-outline-secondary toggle-details-btn fw-bold" data-index="{{ loop.index0 }}">
+                            <i class="fa-solid fa-chevron-down me-1"></i> Log
                         </button>
                         {% if result.candidate_id %}
-                            <a href="{{ url_for('admin.candidate_detail', id=result.candidate_id) }}" class="btn btn-sm btn-outline-primary">View</a>
+                            <a href="{{ url_for('admin.candidate_detail', id=result.candidate_id) }}" class="btn btn-sm btn-outline-primary fw-bold">View</a>
                         {% endif %}
                     </td>
                 </tr>
-                <!-- Details Row (Hidden by default) -->
+                <!-- Expandable Evaluation Log Row -->
                 <tr id="details_{{ loop.index0 }}" class="d-none">
-                    <td colspan="9">
-                        <div class="p-3 bg-light">
-                            <h6 class="mb-3">Screening Evaluation Log</h6>
+                    <td colspan="9" class="p-0">
+                        <div class="p-3 bg-light border-start border-4 border-primary">
+                            <h6 class="fw-bold text-dark mb-2"><i class="fa-solid fa-microchip me-2"></i>Engine Evaluation Log Breakdown</h6>
                             {% if result.evaluation_log %}
-                                <div class="row">
+                                <div class="row g-3">
                                     <div class="col-md-6">
-                                        <strong>Steps:</strong>
-                                        <ul class="mb-0 small">
+                                        <div class="fw-bold mb-1 small text-uppercase">Rule Validation Steps:</div>
+                                        <ul class="mb-0 list-unstyled small">
                                             {% for step in result.evaluation_log %}
-                                                <li class="{{ 'text-success' if step.passed else 'text-danger' }}">
-                                                    <strong>{{ step.step|replace('_', ' ')|title }}:</strong> 
-                                                    {{ step.message }}
+                                                <li class="mb-1 p-1 rounded {{ 'bg-success-subtle text-success' if step.passed else 'bg-danger-subtle text-danger' }}">
                                                     {% if step.passed %}
-                                                        <i class="fa-solid fa-check text-success"></i>
+                                                        <i class="fa-solid fa-circle-check text-success me-1"></i>
                                                     {% else %}
-                                                        <i class="fa-solid fa-times text-danger"></i>
+                                                        <i class="fa-solid fa-circle-xmark text-danger me-1"></i>
                                                     {% endif %}
+                                                    <strong>{{ step.step|replace('_', ' ')|title }}:</strong> {{ step.message }}
                                                 </li>
                                             {% endfor %}
                                         </ul>
                                     </div>
                                     <div class="col-md-6">
                                         {% if result.aggregate_score %}
-                                            <strong>Score Breakdown:</strong>
-                                            <ul class="mb-0 small">
+                                            <div class="fw-bold mb-1 small text-uppercase">Score Calculation Breakdown:</div>
+                                            <ul class="mb-2 list-unstyled small bg-white p-2 rounded border">
                                                 {% for log_item in result.evaluation_log %}
                                                     {% if log_item.step == 'aggregate' %}
-                                                        <li>JAMB Component: {{ log_item.jamb_component }}</li>
-                                                        <li>Post-UTME Component: {{ log_item.post_utme_component }}</li>
-                                                        <li>O'Level Component: {{ log_item.olevel_component }}</li>
-                                                        <li><strong>Total Aggregate: {{ log_item.aggregate }}</strong></li>
-                                                        <li>Formula: {{ log_item.formula }}</li>
+                                                        <li><strong>JAMB Component:</strong> {{ log_item.jamb_component }}</li>
+                                                        <li><strong>Post-UTME Component:</strong> {{ log_item.post_utme_component }}</li>
+                                                        <li><strong>O'Level Component:</strong> {{ log_item.olevel_component }}</li>
+                                                        <li class="mt-1 pt-1 border-top"><strong>Final Aggregate Score:</strong> {{ log_item.aggregate }}</li>
                                                     {% endif %}
                                                 {% endfor %}
                                             </ul>
                                         {% endif %}
-                                        
-                                        {% if result.quota_category %}
-                                            <strong>Quota Classification:</strong>
-                                            <p class="mb-0 small">{{ result.quota_category|capitalize }}</p>
-                                        {% endif %}
-                                        
+
                                         {% if result.rejection_reason %}
-                                            <strong>Rejection Reason:</strong>
-                                            <p class="mb-0 small text-danger">{{ result.rejection_reason|replace('_', ' ')|title }}</p>
+                                            <div class="p-2 bg-danger-subtle border border-danger rounded">
+                                                <strong class="text-danger small text-uppercase"><i class="fa-solid fa-triangle-exclamation me-1"></i>Rejection Reason:</strong>
+                                                <div class="text-danger fw-bold small mt-1">{{ result.rejection_reason|replace('_', ' ')|title }}</div>
+                                            </div>
                                         {% endif %}
                                     </div>
                                 </div>
                             {% else %}
-                                <p class="text-muted mb-0">No evaluation log available.</p>
+                                <p class="text-muted small mb-0">No evaluation log recorded for this candidate.</p>
                             {% endif %}
                         </div>
                     </td>
                 </tr>
                 {% else %}
-                    <tr>
-                        <td colspan="9" class="text-center py-4 text-muted" style="color: #000000 !important; font-weight: 700 !important;">No screening results found.</td>
-                    </tr>
+                <tr>
+                    <td colspan="9" class="text-center py-4 text-muted fw-bold">No candidate screening results recorded for this batch.</td>
+                </tr>
                 {% endfor %}
             </tbody>
         </table>
@@ -395,8 +383,113 @@
 {% block scripts %}
 {{ super() }}
 <script>
-(() => {
-    // Filter functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Chart 1: Outcome Doughnut
+    const outcomeCtx = document.getElementById('outcomeChart').getContext('2d');
+    new Chart(outcomeCtx, {
+        type: 'doughnut',
+        data: {
+            labels: ['Recommended', 'Not Recommended'],
+            datasets: [{
+                data: [{{ results.admitted }}, {{ results.rejected }}],
+                backgroundColor: ['#006600', '#cc0000'],
+                borderWidth: 2,
+                borderColor: '#ffffff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom' }
+            }
+        }
+    });
+
+    // 2. Chart 2: Score Bands Bar
+    const scoreCtx = document.getElementById('scoreChart').getContext('2d');
+    new Chart(scoreCtx, {
+        type: 'bar',
+        data: {
+            labels: ['80-100', '70-79', '60-69', '50-59', '< 50'],
+            datasets: [{
+                label: 'Candidate Count',
+                data: [
+                    {{ analytics.score_bands['80-100'] }}, 
+                    {{ analytics.score_bands['70-79'] }}, 
+                    {{ analytics.score_bands['60-69'] }}, 
+                    {{ analytics.score_bands['50-59'] }}, 
+                    {{ analytics.score_bands['<50'] }}
+                ],
+                backgroundColor: '#0066cc',
+                borderColor: '#004499',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, ticks: { precision: 0 } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    // 3. Chart 3: Quota Allocation Bar
+    const quotaCtx = document.getElementById('quotaChart').getContext('2d');
+    new Chart(quotaCtx, {
+        type: 'bar',
+        data: {
+            labels: ['Merit', 'Catchment', 'ELDS'],
+            datasets: [{
+                label: 'Admitted Candidates',
+                data: [
+                    {{ analytics.quota_counts.merit }}, 
+                    {{ analytics.quota_counts.catchment }}, 
+                    {{ analytics.quota_counts.elds }}
+                ],
+                backgroundColor: ['#0066cc', '#0088cc', '#cc6600'],
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, ticks: { precision: 0 } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    // 4. Chart 4: Top States Horizontal Bar
+    const stateLabels = {{ analytics.top_states.keys()|list|tojson }};
+    const stateData = {{ analytics.top_states.values()|list|tojson }};
+    const stateCtx = document.getElementById('stateChart').getContext('2d');
+    new Chart(stateCtx, {
+        type: 'bar',
+        data: {
+            labels: stateLabels.length ? stateLabels : ['None'],
+            datasets: [{
+                label: 'Candidates',
+                data: stateData.length ? stateData : [0],
+                backgroundColor: '#663399',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                x: { beginAtZero: true, ticks: { precision: 0 } }
+            },
+            plugins: { legend: { display: false } }
+        }
+    });
+
+    // Table Filter Functionality
     const statusFilters = document.querySelectorAll('input[name="statusFilter"]');
     const searchInput = document.getElementById('searchResults');
     const tableRows = document.querySelectorAll('#resultsTable tbody tr[data-status]');
@@ -406,7 +499,7 @@
         const searchTerm = searchInput.value.toLowerCase();
         
         tableRows.forEach(row => {
-            if (row.querySelector('td[colspan="9"]')) return; // Skip detail rows
+            if (row.querySelector('td[colspan="9"]')) return;
             
             const statusMatch = selectedStatus === 'all' || row.dataset.status === selectedStatus;
             const nameMatch = row.dataset.name.includes(searchTerm);
@@ -416,23 +509,19 @@
             const shouldShow = statusMatch && searchMatch;
             row.style.display = shouldShow ? '' : 'none';
             
-            // Hide corresponding detail row
             const detailRow = document.getElementById(row.nextElementSibling?.id);
             if (detailRow) {
-                detailRow.style.display = 'none';
+                detailRow.classList.add('d-none');
             }
         });
     }
     
-    statusFilters.forEach(radio => {
-        radio.addEventListener('change', filterTable);
-    });
-    
+    statusFilters.forEach(radio => radio.addEventListener('change', filterTable));
     searchInput.addEventListener('input', filterTable);
     
-    // Toggle details
+    // Expandable Evaluation Log Rows
     document.querySelectorAll('.toggle-details-btn').forEach(btn => {
-        btn.addEventListener('click', function(event) {
+        btn.addEventListener('click', function() {
             const index = this.dataset.index;
             const detailRow = document.getElementById(`details_${index}`);
             const icon = this.querySelector('i');
@@ -452,24 +541,16 @@
             }
         });
     });
+});
+
+function exportResults() {
+    const selectedStatus = document.querySelector('input[name="statusFilter"]:checked').value;
+    const searchTerm = document.getElementById('searchResults').value;
     
-    // Export functionality
-    window.exportResults = function() {
-        const selectedStatus = document.querySelector('input[name="statusFilter"]:checked').value;
-        const searchTerm = searchInput.value;
-        
-        let exportUrl = `{{ url_for('admin.candidates') }}?export=csv&screening_results=true`;
-        
-        if (selectedStatus !== 'all') {
-            exportUrl += `&status=${selectedStatus}`;
-        }
-        
-        if (searchTerm) {
-            exportUrl += `&search=${encodeURIComponent(searchTerm)}`;
-        }
-        
-        window.open(exportUrl, '_blank');
-    };
-})();
+    let exportUrl = `{{ url_for('admin.candidates') }}?export=csv&screening_results=true`;
+    if (selectedStatus !== 'all') exportUrl += `&status=${selectedStatus}`;
+    if (searchTerm) exportUrl += `&search=${encodeURIComponent(searchTerm)}`;
+    window.open(exportUrl, '_blank');
+}
 </script>
 {% endblock %}

@@ -225,7 +225,7 @@ def seed_university_config():
         short_code="CUSTECH",
         formula_type="CUSTECH",
         jamb_divisor=8.0,
-        post_utme_divisor=4.0,
+        post_utme_divisor=2.0,
         merit_quota_percent=45,
         catchment_quota_percent=35,
         elds_quota_percent=20,

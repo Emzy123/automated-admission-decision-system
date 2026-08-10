@@ -170,7 +170,8 @@
                     </div>
                 </div>
                 <h5 class="modal-title mb-2" id="uploadProgressModalLabel" style="font-weight: 700; color: #0f172a;">Importing Candidate Data</h5>
-                <p class="text-muted small mb-4" id="uploadProgressStatus">Preparing database import...</p>
+                <p class="text-muted small mb-1" id="uploadProgressStatus">Preparing database import...</p>
+                <p class="text-success small mb-4 fw-bold" id="uploadProgressETA"></p>
                 
                 <div class="progress mb-3" style="height: 12px; border-radius: 6px; background-color: #f1f5f9;">
                     <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success" role="progressbar" style="width: 0%; border-radius: 6px;" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
@@ -186,47 +187,70 @@
 </div>
 
 <script>
-document.getElementById('previewImportForm').addEventListener('submit', function(e) {
+document.getElementById('previewImportForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
     // Show progress modal
-    const progressModal = new bootstrap.Modal(document.getElementById('uploadProgressModal'));
+    const progressModalElement = document.getElementById('uploadProgressModal');
+    const progressModal = new bootstrap.Modal(progressModalElement);
     progressModal.show();
 
     const progressBar = document.getElementById('uploadProgressBar');
     const progressPercent = document.getElementById('uploadProgressPercent');
     const progressStatus = document.getElementById('uploadProgressStatus');
     const progressDetail = document.getElementById('uploadProgressDetail');
+    const progressETA = document.getElementById('uploadProgressETA');
 
-    let percent = 0;
-    
-    const statuses = [
-        { threshold: 12, title: "Reading Temporary File...", detail: "Accessing stored preview rows..." },
-        { threshold: 30, title: "Validating Student Records...", detail: "Checking JAMB formats and states of origin..." },
-        { threshold: 55, title: "Creating Candidate Profiles...", detail: "Populating demographics and course choices..." },
-        { threshold: 78, title: "Creating Portal Accounts...", detail: "Generating usernames and email credentials..." },
-        { threshold: 92, title: "Verifying O'Level Sittings...", detail: "Evaluating WAEC/NECO subject combinations..." },
-        { threshold: 98, title: "Finalizing Database Transaction...", detail: "Writing records and saving changes..." }
-    ];
+    progressStatus.textContent = "Processing import...";
+    progressETA.textContent = "Please wait...";
 
-    const interval = setInterval(() => {
-        if (percent < 98) {
-            let increment = 1.8;
-            if (percent > 85) increment = 0.15;
-            else if (percent > 60) increment = 0.5;
-            else if (percent > 30) increment = 1.0;
-            
-            percent = Math.min(percent + increment, 98);
-            
-            progressBar.style.width = percent.toFixed(0) + '%';
-            progressBar.setAttribute('aria-valuenow', percent.toFixed(0));
-            progressPercent.textContent = percent.toFixed(0) + '%';
-            
-            const currentStatus = statuses.find(s => percent <= s.threshold) || statuses[statuses.length - 1];
-            progressStatus.textContent = currentStatus.title;
-            progressDetail.textContent = currentStatus.detail;
-        } else {
-            clearInterval(interval);
+    // Animate the bar while the synchronous request is in flight
+    let fakePercent = 0;
+    const fakeInterval = setInterval(() => {
+        if (fakePercent < 90) {
+            fakePercent = Math.min(fakePercent + (fakePercent < 60 ? 2.5 : 0.6), 90);
+            progressBar.style.width = fakePercent.toFixed(0) + '%';
+            progressPercent.textContent = fakePercent.toFixed(0) + '%';
         }
     }, 150);
+
+    try {
+        const formData = new FormData(this);
+        const response = await fetch(this.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+
+        clearInterval(fakeInterval);
+        const result = await response.json();
+
+        if (!result.success) {
+            throw new Error(result.message || 'Failed to import candidates.');
+        }
+
+        // Synchronous import — result is embedded directly in the response
+        const resInfo = result.summary || {};
+        progressBar.style.width = '100%';
+        progressPercent.textContent = '100%';
+        progressStatus.textContent = 'Import Completed!';
+        progressETA.textContent = '';
+        progressDetail.textContent =
+            `Created: ${resInfo.created || 0} | Skipped: ${resInfo.skipped || 0} | Errors: ${resInfo.errors || 0}`;
+
+        setTimeout(() => {
+            progressModal.hide();
+            window.location.href = "{{ url_for('admin.candidates') }}";
+        }, 1800);
+
+    } catch (error) {
+        clearInterval(fakeInterval);
+        progressModal.hide();
+        console.error('Import error:', error);
+        alert('Import failed: ' + error.message);
+    }
 });
 </script>
 {% endblock %}

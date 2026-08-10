@@ -4,7 +4,7 @@ import pandas as pd
 from io import BytesIO
 
 from app import db
-from app.models import AdmissionRecord, Programme, MeritListApproval
+from app.models import AdmissionRecord, Programme, MeritListApproval, ELDSState
 
 
 class MeritListGenerator:
@@ -19,84 +19,186 @@ class MeritListGenerator:
         if not self.programme:
             raise ValueError(f"Programme with ID {programme_id} not found")
     
-    def get_qualified_candidates(self, quota_category: str) -> List[AdmissionRecord]:
-        """Get all candidates in a quota category (excluding pending/rejected)"""
-        return AdmissionRecord.query.filter(
+    def _run_sequential_allocation(self, persist: bool = False) -> Dict[str, Dict[str, Any]]:
+        """
+        Executes the sequential quota allocation algorithm.
+        All candidates compete for Merit first, then Catchment (if eligible), then ELDS (if eligible).
+        Resolves ties in aggregate score by UTME score (DESC) and candidate database ID (ASC).
+        """
+        # Fetch all qualified candidates for this programme and session
+        records = AdmissionRecord.query.filter(
             AdmissionRecord.programme_id == self.programme.id,
             AdmissionRecord.session_id == self.session_id,
-            AdmissionRecord.quota_category == quota_category,
             AdmissionRecord.status.in_(['recommended', 'admitted', 'finalized', 'waiting_list', 'accepted', 'declined'])
         ).options(
             db.joinedload(AdmissionRecord.candidate)
-        ).order_by(AdmissionRecord.aggregate_score.desc()).all()
-    
-    def generate_quota_list(self, quota_category: str) -> Dict[str, Any]:
-        """Generate ranked list and apply slot limit"""
-        candidates = self.get_qualified_candidates(quota_category)
-        
-        # Only non-declined candidates count toward slot limits
-        eligible = [c for c in candidates if c.status != 'declined']
-        slot_limit = getattr(self.programme, f'{quota_category}_slots', 0)
-        
-        admitted = eligible[:slot_limit]
-        waiting = eligible[slot_limit:]
-        
-        # Include declined records in the admitted section for visibility (they won't take up real slots)
-        declined_records = [c for c in candidates if c.status == 'declined']
-        
-        # Update status for admitted candidates
-        for record in admitted:
-            if record.status == 'recommended':
-                record.status = 'admitted'
-                record.admitted_at = datetime.utcnow()
-            if record.candidate:
-                record.candidate.status = record.status
-                
-        # Reset status for waiting list candidates if they were previously admitted
-        for record in waiting:
-            if record.status == 'admitted':
-                record.status = 'recommended'
-                record.admitted_at = None
-            if record.candidate:
-                record.candidate.status = record.status
-                
-        # Ensure status is synced for declined records as well
-        for record in declined_records:
-            if record.candidate:
-                record.candidate.status = record.status
-                
-        try:
-            db.session.commit()
-        except:
-            db.session.rollback()
-        
-        # Format for display — declined records shown in admitted section but visually muted
+        ).all()
+
+        # Catchment and ELDS states for eligibility checks
+        catchment_states = {c.state_name for c in self.programme.university.catchment_states}
+        elds_states = {s.state_name for s in ELDSState.query.all()}
+
+        # Sort records:
+        # 1. aggregate_score DESC
+        # 2. Candidate.utme_score DESC
+        # 3. Candidate.id ASC
+        records.sort(
+            key=lambda r: (
+                -r.aggregate_score,
+                -(r.candidate.utme_score if r.candidate else 0),
+                (r.candidate.id if r.candidate else 0)
+            )
+        )
+
+        merit_slots = self.programme.merit_slots
+        catchment_slots = self.programme.catchment_slots
+        elds_slots = self.programme.elds_slots
+
+        merit_admitted = []
+        merit_waiting = []
+        catchment_admitted = []
+        catchment_waiting = []
+        elds_admitted = []
+        elds_waiting = []
+
+        merit_admitted_count = 0
+        catchment_admitted_count = 0
+        elds_admitted_count = 0
+
+        # Run sequential allocation
+        for r in records:
+            candidate = r.candidate
+            if not candidate:
+                continue
+
+            state = candidate.state_of_origin
+            is_catchment = state in catchment_states
+            is_elds = state in elds_states
+
+            # 1. Competes for Merit first
+            if merit_admitted_count < merit_slots:
+                merit_admitted.append(r)
+                if r.status != 'declined':
+                    merit_admitted_count += 1
+                r.quota_category = 'merit'
+            # 2. Competes for Catchment next
+            elif is_catchment and catchment_admitted_count < catchment_slots:
+                catchment_admitted.append(r)
+                if r.status != 'declined':
+                    catchment_admitted_count += 1
+                r.quota_category = 'catchment'
+            # 3. Competes for ELDS next
+            elif is_elds and elds_admitted_count < elds_slots:
+                elds_admitted.append(r)
+                if r.status != 'declined':
+                    elds_admitted_count += 1
+                r.quota_category = 'elds'
+            # 4. Otherwise, goes to waiting list
+            else:
+                if is_catchment:
+                    r.quota_category = 'catchment'
+                    catchment_waiting.append(r)
+                elif is_elds:
+                    r.quota_category = 'elds'
+                    elds_waiting.append(r)
+                else:
+                    r.quota_category = 'merit'
+                    merit_waiting.append(r)
+
+        # Update candidate/record statuses
+        all_admitted = merit_admitted + catchment_admitted + elds_admitted
+        all_waiting = merit_waiting + catchment_waiting + elds_waiting
+
+        for r in all_admitted:
+            if r.status == 'recommended':
+                r.status = 'admitted'
+                r.admitted_at = datetime.utcnow()
+            if r.candidate:
+                r.candidate.status = r.status
+
+        for r in all_waiting:
+            if r.status == 'admitted':
+                r.status = 'recommended'
+                r.admitted_at = None
+            if r.candidate:
+                r.candidate.status = r.status
+
+        if persist:
+            try:
+                db.session.commit()
+            except Exception as e:
+                db.session.rollback()
+                raise e
+
         return {
-            'quota': quota_category,
-            'slot_limit': slot_limit,
-            'qualified_count': len(eligible),
-            'admitted': self._format_candidates(admitted + declined_records),
-            'waiting': self._format_candidates(waiting),
-            'cutoff_score': admitted[-1].aggregate_score if admitted else 0,
-            'waiting_cutoff': waiting[0].aggregate_score if waiting else 0
-        }
-    
-    def generate_full_list(self) -> Dict[str, Any]:
-        """Generate all three quota lists"""
-        return {
-            'merit': self.generate_quota_list('merit'),
-            'catchment': self.generate_quota_list('catchment'),
-            'elds': self.generate_quota_list('elds'),
-            'programme': {
-                'id': self.programme.id,
-                'name': self.programme.name,
-                'code': self.programme.code,
-                'total_slots': self.programme.total_slots,
-                'merit_slots': self.programme.merit_slots,
-                'catchment_slots': self.programme.catchment_slots,
-                'elds_slots': self.programme.elds_slots
+            'merit': {
+                'admitted': merit_admitted,
+                'waiting': merit_waiting,
+                'slot_limit': merit_slots
+            },
+            'catchment': {
+                'admitted': catchment_admitted,
+                'waiting': catchment_waiting,
+                'slot_limit': catchment_slots
+            },
+            'elds': {
+                'admitted': elds_admitted,
+                'waiting': elds_waiting,
+                'slot_limit': elds_slots
             }
         }
+
+    def generate_quota_list(self, quota_category: str, persist: bool = False) -> Dict[str, Any]:
+        """Generate ranked list and apply slot limit using sequential allocation"""
+        full_list = self.generate_full_list(persist=persist)
+        return full_list.get(quota_category)
+    
+    def generate_full_list(self, persist: bool = False) -> Dict[str, Any]:
+        """Generate all three quota lists using sequential allocation"""
+        allocation = self._run_sequential_allocation(persist=persist)
+        
+        result = {}
+        for quota in ['merit', 'catchment', 'elds']:
+            quota_data = allocation[quota]
+            admitted = quota_data['admitted']
+            waiting = quota_data['waiting']
+            slot_limit = quota_data['slot_limit']
+            
+            eligible = [c for c in admitted + waiting if c.status != 'declined']
+            
+            admitted_formatted = self._format_candidates(admitted)
+            waiting_formatted = self._format_candidates(waiting)
+            
+            # Cutoffs
+            non_declined_admitted = [c for c in admitted if c.status != 'declined']
+            cutoff_score = non_declined_admitted[-1].aggregate_score if non_declined_admitted else 0
+            waiting_cutoff = waiting[0].aggregate_score if waiting else 0
+            
+            result[quota] = {
+                'quota': quota,
+                'slot_limit': slot_limit,
+                'qualified_count': len(eligible),
+                'admitted': admitted_formatted,
+                'waiting': waiting_formatted,
+                'cutoff_score': cutoff_score,
+                'waiting_cutoff': waiting_cutoff
+            }
+            
+        # Revert session dirtying if we didn't persist, ensuring read-only safety
+        if not persist:
+            db.session.rollback()
+            
+        result['programme'] = {
+            'id': self.programme.id,
+            'name': self.programme.name,
+            'code': self.programme.code,
+            'total_slots': self.programme.total_slots,
+            'merit_slots': self.programme.merit_slots,
+            'catchment_slots': self.programme.catchment_slots,
+            'elds_slots': self.programme.elds_slots
+        }
+        
+        return result
     
     def _format_candidates(self, records: List[AdmissionRecord]) -> List[Dict[str, Any]]:
         """Format admission records for display"""
@@ -117,6 +219,7 @@ class MeritListGenerator:
                 'status': record.status
             })
         return formatted
+
     
     def export_to_excel(self, quota_category: Optional[str] = None) -> BytesIO:
         """Export merit list to Excel file"""
@@ -218,80 +321,44 @@ class MeritListGenerator:
         output.seek(0)
         return output
     
-    def get_statistics(self) -> Dict[str, Any]:
-        """Get admission statistics for the programme"""
+    def get_statistics(self, merit_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Get admission statistics for the programme. If merit_data is not provided, runs sequential allocation in-memory (read-only)."""
+        if merit_data is None:
+            merit_data = self.generate_full_list(persist=False)
+            
         total_slots = self.programme.total_slots
         
-        # Count admitted candidates by quota (admitted, finalized, accepted)
-        admitted_merit = AdmissionRecord.query.filter(
-            AdmissionRecord.programme_id == self.programme.id,
-            AdmissionRecord.session_id == self.session_id,
-            AdmissionRecord.status.in_(['admitted', 'finalized', 'accepted']),
-            AdmissionRecord.quota_category == 'merit'
-        ).count()
+        def get_quota_stats(quota_key):
+            quota_info = merit_data.get(quota_key, {})
+            admitted = quota_info.get('admitted', [])
+            waiting = quota_info.get('waiting', [])
+            
+            filled = sum(1 for c in admitted if c['status'] in ['admitted', 'finalized', 'accepted'])
+            recommended = len(waiting)
+            slots = quota_info.get('slot_limit', 0)
+            
+            return {
+                'slots': slots,
+                'filled': filled,
+                'available': max(slots - filled, 0),
+                'recommended': recommended
+            }
+            
+        merit_stats = get_quota_stats('merit')
+        catchment_stats = get_quota_stats('catchment')
+        elds_stats = get_quota_stats('elds')
         
-        admitted_catchment = AdmissionRecord.query.filter(
-            AdmissionRecord.programme_id == self.programme.id,
-            AdmissionRecord.session_id == self.session_id,
-            AdmissionRecord.status.in_(['admitted', 'finalized', 'accepted']),
-            AdmissionRecord.quota_category == 'catchment'
-        ).count()
-        
-        admitted_elds = AdmissionRecord.query.filter(
-            AdmissionRecord.programme_id == self.programme.id,
-            AdmissionRecord.session_id == self.session_id,
-            AdmissionRecord.status.in_(['admitted', 'finalized', 'accepted']),
-            AdmissionRecord.quota_category == 'elds'
-        ).count()
-        
-        # Count recommended candidates by quota (recommended, waiting_list)
-        recommended_merit = AdmissionRecord.query.filter(
-            AdmissionRecord.programme_id == self.programme.id,
-            AdmissionRecord.session_id == self.session_id,
-            AdmissionRecord.status.in_(['recommended', 'waiting_list']),
-            AdmissionRecord.quota_category == 'merit'
-        ).count()
-        
-        recommended_catchment = AdmissionRecord.query.filter(
-            AdmissionRecord.programme_id == self.programme.id,
-            AdmissionRecord.session_id == self.session_id,
-            AdmissionRecord.status.in_(['recommended', 'waiting_list']),
-            AdmissionRecord.quota_category == 'catchment'
-        ).count()
-        
-        recommended_elds = AdmissionRecord.query.filter(
-            AdmissionRecord.programme_id == self.programme.id,
-            AdmissionRecord.session_id == self.session_id,
-            AdmissionRecord.status.in_(['recommended', 'waiting_list']),
-            AdmissionRecord.quota_category == 'elds'
-        ).count()
-        
-        total_filled = admitted_merit + admitted_catchment + admitted_elds
-        total_recommended = recommended_merit + recommended_catchment + recommended_elds
+        total_filled = merit_stats['filled'] + catchment_stats['filled'] + elds_stats['filled']
+        total_recommended = merit_stats['recommended'] + catchment_stats['recommended'] + elds_stats['recommended']
         
         return {
             'total_slots': total_slots,
             'filled': total_filled,
-            'available': total_slots - total_filled,
+            'available': max(total_slots - total_filled, 0),
             'total_recommended': total_recommended,
-            'merit': {
-                'slots': self.programme.merit_slots,
-                'filled': admitted_merit,
-                'available': self.programme.merit_slots - admitted_merit,
-                'recommended': recommended_merit
-            },
-            'catchment': {
-                'slots': self.programme.catchment_slots,
-                'filled': admitted_catchment,
-                'available': self.programme.catchment_slots - admitted_catchment,
-                'recommended': recommended_catchment
-            },
-            'elds': {
-                'slots': self.programme.elds_slots,
-                'filled': admitted_elds,
-                'available': self.programme.elds_slots - admitted_elds,
-                'recommended': recommended_elds
-            }
+            'merit': merit_stats,
+            'catchment': catchment_stats,
+            'elds': elds_stats
         }
     
     def finalize_list(self) -> bool:

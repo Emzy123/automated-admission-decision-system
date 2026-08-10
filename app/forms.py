@@ -84,7 +84,31 @@ class UniversityConfigForm(FlaskForm):
         validators=[DataRequired()],
         default='{"A1": 8, "B2": 7, "B3": 6, "C4": 5, "C5": 4, "C6": 3}',
     )
+    primary_color = StringField(
+        "Primary Color (Hex)",
+        default="#1a3a5c",
+        validators=[DataRequired(), Length(min=4, max=7)],
+    )
+    secondary_color = StringField(
+        "Secondary Color (Hex)",
+        default="#2563eb",
+        validators=[DataRequired(), Length(min=4, max=7)],
+    )
+    logo_url = StringField(
+        "Logo URL / Path",
+        validators=[Optional(), Length(max=500)],
+    )
     submit = SubmitField("Save Configuration")
+
+    def validate_primary_color(self, field):
+        import re
+        if not re.match(r'^#[0-9a-fA-F]{6}$', field.data) and not re.match(r'^#[0-9a-fA-F]{3}$', field.data):
+            raise ValidationError("Primary color must be a valid hex color code (e.g., #1a3a5c).")
+
+    def validate_secondary_color(self, field):
+        import re
+        if not re.match(r'^#[0-9a-fA-F]{6}$', field.data) and not re.match(r'^#[0-9a-fA-F]{3}$', field.data):
+            raise ValidationError("Secondary color must be a valid hex color code (e.g., #2563eb).")
 
     def validate_grade_points_json(self, field):
         try:

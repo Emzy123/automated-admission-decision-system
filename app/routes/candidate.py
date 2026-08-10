@@ -136,6 +136,8 @@ def decline_admission(record_id):
         
     if record.status in ['admitted', 'accepted']:
         record.status = 'declined'
+        if record.candidate:
+            record.candidate.status = 'declined'
         db.session.commit()
         flash('You have successfully declined your admission offer.', 'info')
         
@@ -143,7 +145,7 @@ def decline_admission(record_id):
         try:
             from app.services.merit_list import MeritListGenerator
             generator = MeritListGenerator(record.programme_id, record.session_id)
-            generator.generate_quota_list(record.quota_category)
+            generator.generate_quota_list(record.quota_category, persist=True)
         except Exception as e:
             # We don't want a crash here to break the user experience, though it should be logged.
             pass

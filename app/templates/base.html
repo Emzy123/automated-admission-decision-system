@@ -163,6 +163,12 @@
             </li>
             {% if current_user.is_authenticated and current_user.role == 'admin' %}
             <li class="nav-item" role="none">
+                <a class="nav-link" href="{{ url_for('conclusion.index') }}" data-page="conclusion" role="menuitem">
+                    <i class="fa-solid fa-calendar-check nav-icon" aria-hidden="true"></i>
+                    <span class="nav-text">Session Management</span>
+                </a>
+            </li>
+            <li class="nav-item" role="none">
                 <a class="nav-link" href="{{ url_for('admin.audit_logs') }}" data-page="audit_logs" role="menuitem">
                     <i class="fa-solid fa-clipboard-list nav-icon" aria-hidden="true"></i>
                     <span class="nav-text">Audit Logs</span>

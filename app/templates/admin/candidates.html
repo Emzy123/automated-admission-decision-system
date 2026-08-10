@@ -326,6 +326,7 @@
                     <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" role="button" data-sort-index="4" class="text-nowrap">Post-UTME <i class="fa-solid fa-sort small"></i></th>
                     <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" class="text-nowrap">Programme</th>
                     <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" class="text-nowrap">Session</th>
+                    <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" class="text-nowrap">Status / Details</th>
                     <th style="color: #000000 !important; background-color: #f0f0f0 !important; font-weight: 900 !important;" class="text-end text-nowrap">Actions</th>
                 </tr>
             </thead>
@@ -360,6 +361,34 @@
                                     <span style="color: #000000 !important; font-weight: 700 !important;">Not assigned</span>
                                 {% endif %}
                             </td>
+                            <td style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">
+                                {% if candidate.status == 'admitted' or candidate.status == 'accepted' or candidate.status == 'finalized' %}
+                                    <span class="badge bg-success">Admitted</span>
+                                {% elif candidate.status == 'recommended' %}
+                                    <span class="badge bg-info">Recommended</span>
+                                {% elif candidate.status == 'rejected' %}
+                                    <span class="badge bg-danger">Rejected</span>
+                                    {% set record = candidate.admission_records[0] if candidate.admission_records else None %}
+                                    {% if record and record.rejection_reason %}
+                                        <br>
+                                        <small class="text-danger fw-bold" style="font-size: 0.75rem;">
+                                            {% if record.rejection_reason == 'utme_cutoff' %}
+                                                Failed UTME Cutoff
+                                            {% elif record.rejection_reason == 'subject_combination' %}
+                                                Invalid UTME Combination
+                                            {% elif record.rejection_reason == 'olevel_credits' %}
+                                                Deficient O'Level Credits
+                                            {% elif record.rejection_reason == 'olevel_sittings' %}
+                                                Too many O'Level sittings
+                                            {% else %}
+                                                {{ record.rejection_reason|capitalize }}
+                                            {% endif %}
+                                        </small>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ candidate.status|capitalize }}</span>
+                                {% endif %}
+                            </td>
                             <td class="text-end text-nowrap" style="color: #000000 !important; background-color: #ffffff !important; font-weight: 700 !important;">
                                 <a href="{{ url_for('admin.candidate_detail', id=candidate.id) }}" class="btn btn-sm btn-outline-secondary me-1">View</a>
                                 <a href="{{ url_for('admin.edit_candidate', id=candidate.id) }}" class="btn btn-sm btn-outline-primary">Edit</a>
@@ -368,7 +397,7 @@
                     {% endfor %}
                 {% else %}
                     <tr>
-                        <td colspan="8" class="text-center py-4 text-muted" style="color: #000000 !important; font-weight: 700 !important;">No candidates found for current filters.</td>
+                        <td colspan="9" class="text-center py-4 text-muted" style="color: #000000 !important; font-weight: 700 !important;">No candidates found for current filters.</td>
                     </tr>
                 {% endif %}
             </tbody>

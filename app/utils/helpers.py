@@ -35,3 +35,39 @@ def calculate_age(date_of_birth):
     return today.year - date_of_birth.year - (
         (today.month, today.day) < (date_of_birth.month, date_of_birth.day)
     )
+
+
+def log_audit(action, entity_type, entity_id=None, details=None):
+    """Write an audit log entry immediately using a separate session,
+    ensuring it is persisted independently of request transactions.
+    """
+    from flask import request, has_request_context
+    from flask_login import current_user
+    from app import db
+    from app.models import AuditLog
+    from sqlalchemy.orm import Session
+
+    try:
+        try:
+            user_id = current_user.id if (current_user and current_user.is_authenticated) else None
+        except Exception:
+            user_id = None
+
+        try:
+            ip_addr = request.remote_addr if has_request_context() else None
+        except Exception:
+            ip_addr = None
+
+        with Session(db.engine) as sess:
+            entry = AuditLog(
+                user_id=user_id,
+                action=action,
+                entity_type=entity_type,
+                entity_id=entity_id,
+                details=details or {},
+                ip_address=ip_addr,
+            )
+            sess.add(entry)
+            sess.commit()
+    except Exception:
+        pass  # Never crash request due to audit logging failure

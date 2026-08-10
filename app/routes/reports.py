@@ -13,6 +13,31 @@ from app.utils.helpers import get_active_session
 reports_bp = Blueprint('reports', __name__, url_prefix='/reports')
 
 
+@reports_bp.before_request
+def require_staff_except_personal_letters():
+    from flask import request
+    candidate_allowed_endpoints = ['reports.preview_letter', 'reports.admission_letter']
+    
+    from flask_login import current_user
+    if not current_user.is_authenticated:
+        from flask import redirect, url_for, flash
+        flash("Please sign in to continue.", "warning")
+        return redirect(url_for('index'))
+        
+    if request.endpoint not in candidate_allowed_endpoints:
+        if current_user.role not in ["admin", "super_admin", "admission_officer", "faculty_officer"]:
+            from flask import abort
+            abort(403)
+    elif current_user.role == 'candidate':
+        record_id = request.view_args.get('record_id') if request.view_args else None
+        if record_id:
+            from app.models import AdmissionRecord
+            record = AdmissionRecord.query.get(record_id)
+            if not record or not current_user.candidate_profile or record.candidate_id != current_user.candidate_profile.id:
+                from flask import abort
+                abort(403)
+
+
 @reports_bp.route('/dashboard')
 @login_required
 def dashboard_data():
@@ -109,6 +134,40 @@ def bulk_admission_letters(programme_id):
         
     except Exception as e:
         return jsonify({'error': f'Failed to generate bulk letters: {str(e)}'}), 500
+
+
+@reports_bp.route('/admitted-candidates/<int:programme_id>')
+@login_required
+def get_admitted_candidates(programme_id):
+    """Get all admitted candidates for a programme"""
+    session = get_active_session()
+    if not session:
+        return jsonify({'error': 'No active session found'}), 400
+    
+    try:
+        from sqlalchemy.orm import joinedload
+        
+        # Get admitted candidates for this programme
+        records = AdmissionRecord.query.options(
+            joinedload(AdmissionRecord.candidate)
+        ).filter(
+            AdmissionRecord.programme_id == programme_id,
+            AdmissionRecord.session_id == session.id,
+            AdmissionRecord.status == 'admitted'
+        ).all()
+        
+        candidates = []
+        for record in records:
+            candidates.append({
+                'id': record.id,
+                'name': record.candidate.full_name,
+                'jamb_reg': record.candidate.jamb_reg_number
+            })
+        
+        return jsonify({'candidates': candidates})
+        
+    except Exception as e:
+        return jsonify({'error': f'Failed to load candidates: {str(e)}'}), 500
 
 
 @reports_bp.route('/preview/<int:record_id>')

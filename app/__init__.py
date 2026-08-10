@@ -38,7 +38,7 @@ def create_app(config_name=None):
     from app.routes import register_blueprints
     register_blueprints(app)
 
-    from app.models import Programme, Faculty, AcademicSession
+    from app.models import Programme, Faculty, AcademicSession, University
     
     @app.context_processor
     def inject_global_stats():
@@ -48,16 +48,19 @@ def create_app(config_name=None):
                 active_session = AcademicSession.query.filter_by(is_active=True).first()
                 total_progs = Programme.query.count()
                 total_facs = Faculty.query.count()
+                university = University.query.order_by(University.id.asc()).first()
                 return {
                     'global_active_session': active_session,
                     'global_total_programmes': total_progs,
-                    'global_total_faculties': total_facs
+                    'global_total_faculties': total_facs,
+                    'global_university': university
                 }
             except Exception:
                 return {
                     'global_active_session': None,
                     'global_total_programmes': 0,
-                    'global_total_faculties': 0
+                    'global_total_faculties': 0,
+                    'global_university': None
                 }
         return {}
 
@@ -78,7 +81,10 @@ def create_app(config_name=None):
         if form.validate_on_submit():
             username = form.username.data.strip()
             password = form.password.data
-            user = User.query.filter_by(username=username).first()
+            user = User.query.filter(
+                (db.func.lower(User.username) == db.func.lower(username)) |
+                (db.func.lower(User.email) == db.func.lower(username))
+            ).first()
             
             if user and user.check_password(password):
                 login_user(user, remember=form.remember_me.data)

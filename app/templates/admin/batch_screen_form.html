@@ -332,17 +332,70 @@
 
     <!-- Progress Modal -->
     <div class="modal fade" id="progressModal" tabindex="-1" data-bs-backdrop="static">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">Screening in Progress</h5>
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title text-white fw-bold"><i class="fa-solid fa-gear fa-spin me-2"></i>Screening in Progress</h5>
                 </div>
-                <div class="modal-body">
-                    <div class="progress mb-3">
-                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                <div class="modal-body p-4 text-center">
+                    <div class="progress mb-3" style="height: 20px;">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
                              id="progressBar" style="width: 0%"></div>
                     </div>
-                    <p class="text-center mb-0" id="progressText">Starting screening...</p>
+                    <p class="text-center fw-bold mb-1" id="progressText" style="color: #000000 !important;">Starting screening...</p>
+                    <p class="text-center text-muted small mb-0">Please wait while candidate records are evaluated...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admission Execution Complete Popup Modal -->
+    <div class="modal fade" id="completionModal" tabindex="-1" data-bs-backdrop="static" aria-labelledby="completionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow-lg" style="background-color: #ffffff !important; color: #000000 !important;">
+                <div class="modal-header bg-success text-white py-3">
+                    <h5 class="modal-title text-white fw-bold" id="completionModalLabel">
+                        <i class="fa-solid fa-circle-check me-2"></i>Admission Engine Execution Complete
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-center p-4">
+                    <div class="mb-3 text-success">
+                        <i class="fa-solid fa-square-poll-vertical fa-4x"></i>
+                    </div>
+                    <h4 class="fw-bold mb-2" style="color: #000000 !important;">Batch Admission Screening Finished!</h4>
+                    <p class="text-muted mb-4" style="color: #555555 !important;">The screening engine has finished evaluating selected candidates. Click below to view the detailed analytic report of this run.</p>
+                    
+                    <div class="row g-3 mb-4">
+                        <div class="col-4">
+                            <div class="p-3 rounded" style="background-color: #f8f9fa !important; border: 2px solid #dee2e6 !important;">
+                                <small class="d-block fw-bold mb-1" style="color: #495057 !important;">TOTAL</small>
+                                <h3 class="fw-black mb-0" id="completeTotalCount" style="color: #000000 !important; font-weight: 900 !important;">0</h3>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-3 rounded" style="background-color: #d1e7dd !important; border: 2px solid #a3cfbb !important;">
+                                <small class="d-block fw-bold mb-1" style="color: #0f5132 !important;">RECOMMENDED</small>
+                                <h3 class="fw-black mb-0" id="completeAdmittedCount" style="color: #0f5132 !important; font-weight: 900 !important;">0</h3>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="p-3 rounded" style="background-color: #f8d7da !important; border: 2px solid #f5c2c7 !important;">
+                                <small class="d-block fw-bold mb-1" style="color: #842029 !important;">REJECTED</small>
+                                <h3 class="fw-black mb-0" id="completeRejectedCount" style="color: #842029 !important; font-weight: 900 !important;">0</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <a href="#" id="viewReportBtn" class="btn btn-primary btn-lg fw-bold py-3 shadow">
+                            <i class="fa-solid fa-chart-pie me-2"></i>View Admission Report
+                        </a>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2 justify-content-between">
+                    <small class="text-muted"><i class="fa-solid fa-info-circle me-1"></i>Detailed analytic report ready</small>
+                    <button type="button" class="btn btn-secondary btn-sm fw-bold" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -353,11 +406,19 @@
 {% block scripts %}
 {{ super() }}
 <script>
-// Simple form validation and submission
-document.getElementById('batchScreenForm').addEventListener('submit', function(e) {
+function getCSRFToken() {
+    const metaTag = document.querySelector('meta[name="csrf-token"]');
+    if (metaTag) return metaTag.content;
+    const input = document.querySelector('input[name="csrf_token"]');
+    return input ? input.value : '';
+}
+
+// Form validation and submission via AJAX to trigger popup modal
+document.getElementById('batchScreenForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
     const checkboxes = document.querySelectorAll('.candidate-checkbox:checked');
     if (checkboxes.length === 0) {
-        e.preventDefault();
         alert('Please select at least one candidate for screening.');
         return false;
     }
@@ -366,21 +427,78 @@ document.getElementById('batchScreenForm').addEventListener('submit', function(e
     const sessionSelect = document.getElementById('session_id');
     
     if (!programmeSelect.value || !sessionSelect.value) {
-        e.preventDefault();
         alert('Please select both programme and session.');
         return false;
     }
     
-    // Simple confirmation - if user cancels, prevent submission
     const confirmed = confirm(`Are you sure you want to screen ${checkboxes.length} candidates?`);
     if (!confirmed) {
-        e.preventDefault();
         return false;
     }
     
-    // Allow form to submit normally
-    console.log('Form submitting...');
-    return true;
+    const candidateIds = Array.from(checkboxes).map(cb => parseInt(cb.value));
+    
+    // Show Progress Modal
+    const progressModalEl = document.getElementById('progressModal');
+    const progressModal = new bootstrap.Modal(progressModalEl);
+    progressModal.show();
+    
+    const progressBar = document.getElementById('progressBar');
+    const progressText = document.getElementById('progressText');
+    progressBar.style.width = '0%';
+    progressText.textContent = 'Screening in progress...';
+    
+    let fakePercent = 0;
+    const fakeInterval = setInterval(() => {
+        if (fakePercent < 90) {
+            fakePercent = Math.min(fakePercent + 3, 90);
+            progressBar.style.width = fakePercent + '%';
+        }
+    }, 150);
+
+    try {
+        const response = await fetch('/api/admission/screen', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify({ candidate_ids: candidateIds })
+        });
+        
+        clearInterval(fakeInterval);
+        const result = await response.json();
+        
+        if (!result.success) {
+            throw new Error(result.message || 'Batch screening failed');
+        }
+        
+        progressBar.style.width = '100%';
+        progressText.textContent = 'Done!';
+        
+        setTimeout(() => {
+            progressModal.hide();
+            
+            document.getElementById('completeTotalCount').textContent = result.total || (result.admitted + result.rejected);
+            document.getElementById('completeAdmittedCount').textContent = result.admitted;
+            document.getElementById('completeRejectedCount').textContent = result.rejected;
+            
+            const reportBtn = document.getElementById('viewReportBtn');
+            if (result.batch_id) {
+                reportBtn.href = `/admission/screening/results/${result.batch_id}`;
+            } else {
+                reportBtn.href = `/admission/screening`;
+            }
+            
+            const completionModal = new bootstrap.Modal(document.getElementById('completionModal'));
+            completionModal.show();
+        }, 500);
+
+    } catch (err) {
+        clearInterval(fakeInterval);
+        progressModal.hide();
+        alert('Screening error: ' + err.message);
+    }
 });
 
 // Select all functionality
@@ -441,3 +559,4 @@ document.getElementById('statusFilter').addEventListener('change', function() {
 });
 </script>
 {% endblock %}
+

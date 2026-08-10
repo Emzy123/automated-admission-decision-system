@@ -1,0 +1,249 @@
+{% extends "base.html" %}
+{% block title %}Rejected Candidates{% endblock %}
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3 mt-2">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('admission.screening_dashboard') }}">Screening</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Rejected Candidates</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="h3 mb-1">Screening Dashboard</h1>
+            <p class="text-muted mb-0">Rejected candidates in session: {{ session.name }} (Manual Review Required)</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('admin.candidates') }}" class="btn btn-outline-primary btn-sm">
+                <i class="fa-solid fa-users me-1"></i>All Candidates
+            </a>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link fw-bold" href="{{ url_for('admission.screening_dashboard') }}">
+                <i class="fa-solid fa-hourglass-start me-1"></i> Unscreened Candidates
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link fw-bold" href="{{ url_for('admission.screening_screened') }}">
+                <i class="fa-solid fa-circle-check me-1 text-success"></i> Screened Candidates
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link active fw-bold text-danger" href="{{ url_for('admission.screening_rejected') }}">
+                <i class="fa-solid fa-circle-xmark me-1 text-danger"></i> Rejected Candidates
+            </a>
+        </li>
+    </ul>
+
+    <!-- Filters Section -->
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white">
+            <h6 class="mb-0">Filter by Programme</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" id="filterForm">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-9">
+                        <select class="form-select form-select-sm" name="programme_id">
+                            <option value="">All Programmes</option>
+                            {% for programme in programmes %}
+                                <option value="{{ programme.id }}" {% if selected_programme_id == programme.id %}selected{% endif %}>
+                                    {{ programme.name }} ({{ programme.code }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary btn-sm w-100">
+                            <i class="fa-solid fa-filter me-1"></i>Apply Filter
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-nowrap">JAMB Reg</th>
+                        <th class="text-nowrap">Full Name</th>
+                        <th class="text-nowrap">State</th>
+                        <th class="text-nowrap">UTME</th>
+                        <th class="text-nowrap">O'Level Sittings</th>
+                        <th class="text-nowrap">Programme Choice</th>
+                        <th class="text-nowrap">Rejection Reason</th>
+                        <th class="text-end text-nowrap">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if candidates %}
+                        {% for candidate in candidates %}
+                            {% set record = candidate.admission_records[0] if candidate.admission_records else None %}
+                            <tr>
+                                <td><code>{{ candidate.jamb_reg_number }}</code></td>
+                                <td>
+                                    <a href="{{ url_for('admin.candidate_detail', id=candidate.id) }}" class="fw-bold text-decoration-none">
+                                        {{ candidate.full_name }}
+                                    </a>
+                                </td>
+                                <td>{{ candidate.state_of_origin or '-' }}</td>
+                                <td><span class="badge bg-primary">{{ candidate.utme_score }}</span></td>
+                                <td>
+                                    {% if candidate.olevel_results %}
+                                        <span class="badge bg-secondary">{{ candidate.olevel_results[0].sitting_number }} Sitting(s)</span>
+                                    {% else %}
+                                        <span class="text-muted small">N/A</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if candidate.first_choice_programme %}
+                                        {{ candidate.first_choice_programme.name }} ({{ candidate.first_choice_programme.code }})
+                                    {% else %}
+                                        <span class="text-muted">Not Set</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if record and record.rejection_reason %}
+                                        <span class="badge bg-danger">
+                                            {% if record.rejection_reason == 'utme_cutoff' %}
+                                                UTME Score Below Cutoff
+                                            {% elif record.rejection_reason == 'subject_combination' %}
+                                                Invalid UTME Subject Combination
+                                            {% elif record.rejection_reason == 'olevel_credits' %}
+                                                Deficient O'Level Credits (<5 core)
+                                            {% elif record.rejection_reason == 'olevel_sittings' %}
+                                                Excessive O'Level Sittings
+                                            {% else %}
+                                                {{ record.rejection_reason|capitalize }}
+                                            {% endif %}
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-danger">Screening Failed</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end text-nowrap">
+                                    <a href="{{ url_for('admission.screening_result_detail', record_id=record.id) if record else '#' }}" class="btn btn-sm btn-outline-secondary me-1">
+                                        <i class="fa-solid fa-eye"></i> Details
+                                    </a>
+                                    {% if record %}
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="openOverrideModal({{ record.id }}, '{{ candidate.full_name }}')">
+                                            <i class="fa-solid fa-wrench me-1"></i>Override
+                                        </button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <div class="text-muted">
+                                    <i class="fa-solid fa-shield-cat fa-3x mb-3 text-muted"></i>
+                                    <p class="mb-0">No rejected candidates found matching the selected filters.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if pagination.pages > 1 %}
+    <nav aria-label="Candidates pagination" class="mt-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="small text-muted">
+                Showing {{ pagination.items|length }} of {{ pagination.total }} candidates
+            </div>
+            <ul class="pagination pagination-sm mb-0">
+                {% if pagination.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admission.screening_rejected', page=pagination.prev_num, programme_id=selected_programme_id) }}">Previous</a>
+                    </li>
+                {% endif %}
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                        <li class="page-item {{ 'active' if page_num == pagination.page else '' }}">
+                            <a class="page-link" href="{{ url_for('admission.screening_rejected', page=page_num, programme_id=selected_programme_id) }}">{{ page_num }}</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endfor %}
+                {% if pagination.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admission.screening_rejected', page=pagination.next_num, programme_id=selected_programme_id) }}">Next</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+    {% endif %}
+</div>
+
+<!-- Override Modal -->
+<div class="modal fade" id="overrideModal" tabindex="-1" aria-labelledby="overrideModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content border-0 shadow-lg" style="border-radius: 12px;">
+            <form id="overrideForm" method="POST" action="">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="new_status" value="admitted"> <!-- Default target status -->
+                
+                <div class="modal-header bg-danger text-white" style="border-top-left-radius: 12px; border-top-right-radius: 12px;">
+                    <h5 class="modal-title" id="overrideModalLabel">Override Screening Decision</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-4">
+                    <p class="mb-3">
+                        You are about to manually override the system rejection decision for candidate:
+                        <strong id="overrideCandidateName" class="d-block mt-1 text-dark"></strong>
+                    </p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Manual Decision Status</label>
+                        <select class="form-select" name="new_status">
+                            <option value="recommended">Recommended (Passed manual verification)</option>
+                            <option value="admitted">Admitted (Direct admission override)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold" for="overrideReason">Reason for Manual Override</label>
+                        <textarea class="form-control" id="overrideReason" name="reason" rows="3" required placeholder="Explain why the candidate is being approved manually (e.g. Catchment waiver, verification mismatch correction, etc.)..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light" style="border-bottom-left-radius: 12px; border-bottom-right-radius: 12px;">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-danger">Confirm Override</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+function openOverrideModal(recordId, candidateName) {
+    const modal = new bootstrap.Modal(document.getElementById('overrideModal'));
+    const form = document.getElementById('overrideForm');
+    const nameSpan = document.getElementById('overrideCandidateName');
+    
+    // Set form action path
+    form.action = `/admission/screening/override/${recordId}`;
+    nameSpan.textContent = candidateName;
+    
+    modal.show();
+}
+</script>
+{% endblock %}

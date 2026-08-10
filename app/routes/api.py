@@ -12,10 +12,25 @@ from app.utils.helpers import get_active_session
 api_bp = Blueprint('api', __name__, url_prefix='/api')
 
 
+@api_bp.before_request
+def require_staff():
+    from flask import request
+    if request.endpoint == 'api.health_check':
+        return None
+    from flask_login import current_user
+    if not current_user.is_authenticated:
+        from flask import redirect, url_for, flash
+        flash("Please sign in to continue.", "warning")
+        return redirect(url_for('index'))
+    if current_user.role not in ["admin", "super_admin", "admission_officer", "faculty_officer"]:
+        from flask import abort
+        abort(403)
+
+
 @api_bp.route('/admission/generate/<int:programme_id>', methods=['POST'])
 @login_required
 def generate_admissions(programme_id):
-    """Generate admission decisions for a specific programme"""
+    """Generate merit list for a specific programme — runs synchronously."""
     try:
         active_session = get_active_session()
         if not active_session:
@@ -23,21 +38,16 @@ def generate_admissions(programme_id):
 
         programme = Programme.query.get_or_404(programme_id)
         generator = MeritListGenerator(programme_id, active_session.id)
-        generator.generate_full_list()
+        result = generator.generate_full_list(persist=True)
         db.session.commit()
 
-        stats = generator.get_statistics()
+        stats = generator.get_statistics(result)
         return jsonify({
             'success': True,
-            'message': f'Admissions generated for {programme.name}',
+            'sync': True,
             'programme': programme.name,
-            'stats': {
-                'total_slots': stats['total_slots'],
-                'filled': stats['filled'],
-                'merit_admitted': stats['merit']['filled'],
-                'catchment_admitted': stats['catchment']['filled'],
-                'elds_admitted': stats['elds']['filled'],
-            }
+            'total_admitted': stats.get('filled', 0),
+            'message': f'Merit list generated for {programme.name}: {stats.get("filled", 0)} admitted.'
         })
     except Exception as e:
         db.session.rollback()
@@ -47,7 +57,7 @@ def generate_admissions(programme_id):
 @api_bp.route('/admission/generate-all', methods=['POST'])
 @login_required
 def generate_all_admissions():
-    """Generate admission decisions for ALL programmes"""
+    """Generate merit lists for ALL programmes — runs synchronously."""
     try:
         active_session = get_active_session()
         if not active_session:
@@ -56,32 +66,26 @@ def generate_all_admissions():
         programmes = Programme.query.all()
         total_admitted = 0
         results = []
-
         for programme in programmes:
             try:
                 generator = MeritListGenerator(programme.id, active_session.id)
-                generator.generate_full_list()
-                stats = generator.get_statistics()
-                total_admitted += stats['filled']
-                results.append({
-                    'programme': programme.name,
-                    'code': programme.code,
-                    'admitted': stats['filled'],
-                    'slots': stats['total_slots']
-                })
+                merit_data = generator.generate_full_list(persist=True)
+                db.session.flush()
+                stats = generator.get_statistics(merit_data)
+                total_admitted += stats.get('filled', 0)
+                results.append({'programme': programme.name, 'admitted': stats.get('filled', 0)})
             except Exception as prog_err:
-                results.append({
-                    'programme': programme.name,
-                    'code': programme.code,
-                    'error': str(prog_err)
-                })
-
+                db.session.rollback()
+                results.append({'programme': programme.name, 'error': str(prog_err)})
         db.session.commit()
+
         return jsonify({
             'success': True,
-            'message': f'Admissions generated for {len(programmes)} programmes. {total_admitted} candidates admitted.',
+            'sync': True,
+            'total_programmes': len(programmes),
             'total_admitted': total_admitted,
-            'results': results
+            'results': results,
+            'message': f'Merit lists generated for {len(programmes)} programmes: {total_admitted} total admitted.'
         })
     except Exception as e:
         db.session.rollback()
@@ -91,80 +95,48 @@ def generate_all_admissions():
 @api_bp.route('/admission/screen', methods=['POST'])
 @login_required
 def screen_candidates():
-    """AJAX endpoint for batch screening candidates"""
+    """AJAX endpoint for batch screening candidates — runs synchronously."""
+    import logging
+    from datetime import datetime as _dt
+    logger = logging.getLogger(__name__)
     try:
         data = request.get_json()
         candidate_ids = data.get('candidate_ids', [])
 
         if not candidate_ids:
-            return jsonify({
-                'success': False,
-                'message': 'No candidate IDs provided'
-            }), 400
+            return jsonify({'success': False, 'message': 'No candidate IDs provided'}), 400
 
-        # Get active session and university
         active_session = get_active_session()
         if not active_session:
-            return jsonify({
-                'success': False,
-                'message': 'No active academic session found'
-            }), 400
+            return jsonify({'success': False, 'message': 'No active academic session found'}), 400
 
         university = University.query.first()
         if not university:
-            return jsonify({
-                'success': False,
-                'message': 'No university configuration found'
-            }), 400
+            return jsonify({'success': False, 'message': 'No university configuration found'}), 400
 
-        # Load all requested candidates
-        candidates = Candidate.query.filter(
-            Candidate.id.in_(candidate_ids)
-        ).all()
-
+        candidates = Candidate.query.filter(Candidate.id.in_(candidate_ids)).all()
         if not candidates:
-            return jsonify({
-                'success': False,
-                'message': 'No valid candidates found'
-            }), 400
+            return jsonify({'success': False, 'message': 'No valid candidates found'}), 400
 
-        # --- GROUP by programme so each candidate is screened against
-        # their own programme's rules, cutoffs, and subject requirements ---
-        programme_groups: dict[int, list] = {}
-        skipped_no_programme = []
-        for candidate in candidates:
-            if not candidate.first_choice_programme_id:
-                skipped_no_programme.append(candidate.id)
-                continue
-            pid = candidate.first_choice_programme_id
-            programme_groups.setdefault(pid, []).append(candidate)
+        # Group by first-choice programme
+        programme_groups: dict = {}
+        no_programme: list = []
+        for c in candidates:
+            if c.first_choice_programme_id:
+                programme_groups.setdefault(c.first_choice_programme_id, []).append(c)
+            else:
+                no_programme.append(c.id)
 
         if not programme_groups:
             return jsonify({
                 'success': False,
-                'message': 'None of the selected candidates have a first choice programme set.'
+                'message': 'None of the selected candidates have a first-choice programme assigned.'
             }), 400
-
-        # Create one batch record to track overall progress
-        batch = AdmissionBatch(
-            session_id=active_session.id,
-            programme_id=next(iter(programme_groups)),   # representative programme
-            batch_name=f"Batch_{datetime.now().strftime('%Y%m%d_%H%M%S')}",
-            quota_category="all",
-            processed_by=current_user.id,
-            total_candidates=len(candidates) - len(skipped_no_programme),
-            admitted_count=0,
-            rejected_count=0
-        )
-        db.session.add(batch)
-        db.session.flush()
 
         total_admitted = 0
         total_rejected = 0
-        all_results = []
-        programme_errors = []
+        first_programme_id = next(iter(programme_groups))
 
-        # Screen each group with the correct engine for that programme
         for programme_id, prog_candidates in programme_groups.items():
             try:
                 engine = ScreeningEngine(
@@ -172,47 +144,50 @@ def screen_candidates():
                     programme_id=programme_id,
                     session_id=active_session.id
                 )
-                ids = [c.id for c in prog_candidates]
-                results = engine.screen_batch(ids)
-                total_admitted += results['admitted']
-                total_rejected += results['rejected']
-                all_results.extend(results['results'])
+                for c in prog_candidates:
+                    result = engine.screen_candidate(c)
+                    if result.get('status') == 'recommended':
+                        total_admitted += 1
+                    else:
+                        total_rejected += 1
+                db.session.flush()
             except Exception as prog_err:
-                programme = Programme.query.get(programme_id)
-                prog_name = programme.name if programme else f"Programme #{programme_id}"
-                programme_errors.append(f"{prog_name}: {str(prog_err)}")
+                db.session.rollback()
+                logger.exception("Screening failed for programme %s", programme_id)
 
-        # Update batch totals
-        batch.admitted_count = total_admitted
-        batch.rejected_count = total_rejected
-        batch.processed_at = datetime.utcnow()
+        # Persist a batch tracking record
+        now = _dt.utcnow()
+        batch = AdmissionBatch(
+            session_id=active_session.id,
+            programme_id=first_programme_id,
+            batch_name=f"BatchScreen_{now.strftime('%Y%m%d_%H%M%S')}",
+            quota_category="all",
+            processed_by=current_user.id,
+            total_candidates=len(candidates),
+            admitted_count=total_admitted,
+            rejected_count=total_rejected,
+            processed_at=now,
+        )
+        db.session.add(batch)
         db.session.commit()
 
-        response_payload = {
+        return jsonify({
             'success': True,
+            'sync': True,
             'batch_id': batch.id,
-            'summary': {
-                'total': total_admitted + total_rejected,
-                'admitted': total_admitted,
-                'rejected': total_rejected,
-                'results': all_results
-            },
-            'message': f'Screening completed for {total_admitted + total_rejected} candidates across {len(programme_groups)} programme(s)'
-        }
-        if skipped_no_programme:
-            response_payload['skipped'] = skipped_no_programme
-            response_payload['skip_reason'] = 'No first choice programme set'
-        if programme_errors:
-            response_payload['programme_errors'] = programme_errors
-
-        return jsonify(response_payload)
+            'total': len(candidates),
+            'admitted': total_admitted,
+            'rejected': total_rejected,
+            'skipped': len(no_programme),
+            'message': f'Screening complete: {total_admitted} recommended, {total_rejected} not recommended.'
+        })
 
     except Exception as e:
         db.session.rollback()
-        return jsonify({
-            'success': False,
-            'message': f'API error: {str(e)}'
-        }), 500
+        logger.exception("screen_candidates API error")
+        return jsonify({'success': False, 'message': f'Screening error: {str(e)}'}), 500
+
+
 
 
 

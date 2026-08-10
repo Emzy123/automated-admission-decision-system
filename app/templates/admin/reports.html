@@ -458,23 +458,31 @@ function loadCandidates() {
     
     showLoading();
     
-    fetch(`/admission/merit-list/${programmeId}/export`)
+    fetch(`/reports/admitted-candidates/${programmeId}`)
         .then(response => response.json())
         .then(data => {
             candidateSelect.innerHTML = '<option value="">Choose a candidate...</option>';
-            data.candidates.forEach(candidate => {
-                const option = document.createElement('option');
-                option.value = candidate.id;
-                option.textContent = `${candidate.name} (${candidate.jamb_reg})`;
-                candidateSelect.appendChild(option);
-            });
-            
-            document.getElementById('singleLetterBtn').disabled = false;
-            document.getElementById('bulkLettersBtn').disabled = false;
+            if (data.candidates && data.candidates.length > 0) {
+                data.candidates.forEach(candidate => {
+                    const option = document.createElement('option');
+                    option.value = candidate.id;
+                    option.textContent = `${candidate.name} (${candidate.jamb_reg})`;
+                    candidateSelect.appendChild(option);
+                });
+                
+                document.getElementById('singleLetterBtn').disabled = false;
+                document.getElementById('bulkLettersBtn').disabled = false;
+            } else {
+                showAlert('No admitted candidates found for this programme', 'warning');
+                document.getElementById('singleLetterBtn').disabled = true;
+                document.getElementById('bulkLettersBtn').disabled = true;
+            }
         })
         .catch(error => {
             console.error('Error loading candidates:', error);
             showAlert('Failed to load candidates', 'danger');
+            document.getElementById('singleLetterBtn').disabled = true;
+            document.getElementById('bulkLettersBtn').disabled = true;
         })
         .finally(() => {
             hideLoading();

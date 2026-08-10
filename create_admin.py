@@ -20,11 +20,27 @@ def create_admin_account():
         print("👤 Creating Admin Account for Testing")
         print("=" * 40)
         
-        # Check if admin already exists
-        existing_admin = User.query.filter_by(username='admin').first()
+        # Check if admin or email already exists
+        existing_admin = User.query.filter(
+            (User.username == 'admin') | 
+            (User.email == 'admin@custech.edu.ng')
+        ).first()
+        
         if existing_admin:
-            print(f"❌ Admin account 'admin' already exists")
-            return False
+            print(f"ℹ️ Admin account already exists. Updating details...")
+            existing_admin.username = 'admin'
+            existing_admin.email = 'admin@custech.edu.ng'
+            existing_admin.role = 'admin'
+            existing_admin.is_active = True
+            existing_admin.set_password('admin@123')
+            db.session.commit()
+            
+            print(f"✅ Admin account updated successfully!")
+            print(f"   Username: admin")
+            print(f"   Password: admin@123")
+            print(f"   Email: admin@custech.edu.ng")
+            print(f"   Role: admin")
+            return True
         
         # Create admin account
         admin = User(
@@ -34,14 +50,14 @@ def create_admin_account():
             role='admin',
             is_active=True
         )
-        admin.set_password('admin')  # Simple password for testing
+        admin.set_password('admin@123')  # Simple password for testing
         
         db.session.add(admin)
         db.session.commit()
         
         print(f"✅ Admin account created successfully!")
         print(f"   Username: admin")
-        print(f"   Password: admin")
+        print(f"   Password: admin@123")
         print(f"   Email: admin@custech.edu.ng")
         print(f"   Role: admin")
         

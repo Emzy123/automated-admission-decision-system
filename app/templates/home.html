@@ -1,6 +1,6 @@
 {% extends "base_public.html" %}
 
-{% block title %}CUSTECH Admission System - Home{% endblock %}
+{% block title %}{{ global_university.short_code if global_university else "CUSTECH" }} Admission System - Home{% endblock %}
 
 {% block content %}
 
@@ -8,7 +8,7 @@
 <section class="hero-section" id="hero">
     <div class="container">
         <div class="hero-content" data-aos="fade-up">
-            <h1 class="hero-title">Confluence University of Science and Technology, Osara</h1>
+            <h1 class="hero-title">{{ global_university.name if global_university else "Confluence University of Science and Technology, Osara" }}</h1>
             <h2 class="hero-subtitle">Automated Rule-Based Admission Decision System</h2>
             <p class="hero-desc">
                 Streamlining the admission process with intelligent, transparent, and merit-based automated screening for the {{ global_active_session.name if global_active_session else "2025/2026" }} academic session.
@@ -329,7 +329,7 @@
             <div class="trust-item"><i class="fa-solid fa-building-columns"></i> Compliant with NUC Guidelines</div>
             <div class="trust-item"><i class="fa-solid fa-landmark"></i> Implements FCC Quota Principles</div>
             <div class="trust-item"><i class="fa-solid fa-graduation-cap"></i> Built for JAMB CAPS Integration</div>
-            <div class="trust-item"><i class="fa-solid fa-code"></i> Dept of Software Engineering, CUSTECH</div>
+            <div class="trust-item"><i class="fa-solid fa-code"></i> Dept of Software Engineering, {{ global_university.short_code if global_university else "CUSTECH" }}</div>
         </div>
     </div>
 </section>

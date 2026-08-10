@@ -3,12 +3,12 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Login - CUSTECH Government Academic Portal</title>
+    <title>Login - {{ global_university.short_code if global_university else "CUSTECH" }} Government Academic Portal</title>
     
     <!-- Accessibility Meta Tags -->
-    <meta name="description" content="Official CUSTECH Government Academic Portal Login - Secure access to admission system">
-    <meta name="keywords" content="CUSTECH, login, government, academic, portal, admission">
-    <meta name="author" content="CUSTECH Administration">
+    <meta name="description" content="Official {{ global_university.short_code if global_university else 'CUSTECH' }} Government Academic Portal Login - Secure access to admission system">
+    <meta name="keywords" content="{{ global_university.short_code if global_university else 'CUSTECH' }}, login, government, academic, portal, admission">
+    <meta name="author" content="{{ global_university.short_code if global_university else 'CUSTECH' }} Administration">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     
     <!-- Skip to Main Content for Screen Readers -->
@@ -62,6 +62,16 @@
             --gray-800: #212529;
             --gray-900: #000000;
         }
+        
+        {% if global_university %}
+        :root {
+            {% if global_university.primary_color %}
+            --primary: {{ global_university.primary_color }};
+            --primary-dark: color-mix(in srgb, {{ global_university.primary_color }} 80%, black);
+            --primary-light: color-mix(in srgb, {{ global_university.primary_color }} 80%, white);
+            {% endif %}
+        }
+        {% endif %}
         
         * {
             margin: 0;
@@ -388,11 +398,15 @@
         <div class="login-left">
             <div class="login-content">
                 <div class="brand-logo">
-                    <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                    {% if global_university and global_university.logo_url %}
+                        <img src="{{ global_university.logo_url }}" alt="Logo" class="img-fluid" style="max-height: 60px; object-fit: contain;">
+                    {% else %}
+                        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i>
+                    {% endif %}
                 </div>
                 <div class="official-badge">OFFICIAL GOVERNMENT PORTAL</div>
-                <h1 class="brand-title">CUSTECH</h1>
-                <p class="brand-subtitle">Confluence University of Science and Technology<br>Government Academic Portal<br>Federal Ministry of Education</p>
+                <h1 class="brand-title">{{ global_university.short_code if global_university else "CUSTECH" }}</h1>
+                <p class="brand-subtitle">{{ global_university.name if global_university else "Confluence University of Science and Technology" }}<br>Government Academic Portal<br>Federal Ministry of Education</p>
                 <div class="login-illustration">
                     <i class="fa-solid fa-user-graduate" aria-hidden="true"></i>
                 </div>
@@ -404,7 +418,7 @@
             <div class="login-form-container" id="login-form">
                 <div class="login-header">
                     <h2>Secure Login</h2>
-                    <p>Access the official CUSTECH Government Academic Portal</p>
+                    <p>Access the official {{ global_university.short_code if global_university else "CUSTECH" }} Government Academic Portal</p>
                 </div>
                 
                 {% with messages = get_flashed_messages(with_categories=true) %}
@@ -476,7 +490,7 @@
             <div class="row">
                 <div class="col-12 text-center">
                     <small class="text-muted">
-                        &copy; 2024 CUSTECH Admission System - Official Government Portal | 
+                        &copy; 2024 {{ global_university.short_code if global_university else "CUSTECH" }} Admission System - Official Government Portal | 
                         <a href="#" class="footer-link">Privacy Policy</a> | 
                         <a href="#" class="footer-link">Accessibility Statement</a> | 
                         <a href="#" class="footer-link">Terms of Service</a>

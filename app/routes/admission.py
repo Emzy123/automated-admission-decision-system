@@ -14,6 +14,21 @@ from flask import send_file
 admission_bp = Blueprint("admission", __name__, url_prefix="/admission")
 
 
+@admission_bp.before_request
+def require_staff():
+    from flask import request
+    if request.endpoint == 'admission.health_check':
+        return None
+    from flask_login import current_user
+    if not current_user.is_authenticated:
+        from flask import redirect, url_for, flash
+        flash("Please sign in to continue.", "warning")
+        return redirect(url_for('index'))
+    if current_user.role not in ["admin", "super_admin", "admission_officer", "faculty_officer"]:
+        from flask import abort
+        abort(403)
+
+
 @admission_bp.route("/health")
 def health_check():
     return jsonify({"status": "ok", "service": "admission"})
@@ -22,20 +37,19 @@ def health_check():
 @admission_bp.route("/screening/screen-all-pending", methods=["POST"])
 @login_required
 def screen_all_pending():
-    """Screen every candidate that has a programme but no AdmissionRecord yet."""
-    from collections import defaultdict
-    from app.models import University
-    from app.services.screening_engine import ScreeningEngine
+    """Screen every candidate that has a programme but no AdmissionRecord yet — runs synchronously."""
+    import logging
+    from datetime import datetime as _dt
+    logger = logging.getLogger(__name__)
 
     active_session = get_active_session()
     if not active_session:
-        flash("No active session found.", "danger")
-        return redirect(url_for("admission.screening_dashboard"))
+        return jsonify({"success": False, "message": "No active session found."}), 400
 
+    from app.models import University
     uni = University.query.first()
     if not uni:
-        flash("No university configured.", "danger")
-        return redirect(url_for("admission.screening_dashboard"))
+        return jsonify({"success": False, "message": "No university configured."}), 400
 
     # Find all candidates with a programme but no AdmissionRecord
     screened_ids = db.session.query(AdmissionRecord.candidate_id)\
@@ -48,39 +62,67 @@ def screen_all_pending():
     ).all()
 
     if not unscreened:
-        flash("All candidates with a programme have already been screened.", "info")
-        return redirect(url_for("admission.screening_dashboard"))
+        return jsonify({"success": False, "message": "All candidates with a programme have already been screened."}), 400
 
-    groups: dict = defaultdict(list)
+    # Group by first-choice programme
+    programme_groups: dict = {}
     for c in unscreened:
-        groups[c.first_choice_programme_id].append(c.id)
+        programme_groups.setdefault(c.first_choice_programme_id, []).append(c)
 
-    total_recommended = 0
+    total_admitted = 0
     total_rejected = 0
-    errors = []
+    first_programme_id = next(iter(programme_groups))
 
-    for prog_id, cand_ids in groups.items():
-        prog = Programme.query.get(prog_id)
+    for programme_id, prog_candidates in programme_groups.items():
         try:
-            engine = ScreeningEngine(uni.id, prog_id, active_session.id)
-            results = engine.screen_batch(cand_ids)
-            db.session.commit()
-            total_recommended += results["admitted"]
-            total_rejected += results["rejected"]
-        except Exception as exc:
+            from app.services.screening_engine import ScreeningEngine
+            engine = ScreeningEngine(
+                university_id=uni.id,
+                programme_id=programme_id,
+                session_id=active_session.id
+            )
+            for c in prog_candidates:
+                result = engine.screen_candidate(c)
+                if result.get('status') == 'recommended':
+                    total_admitted += 1
+                else:
+                    total_rejected += 1
+            db.session.flush()
+        except Exception as prog_err:
             db.session.rollback()
-            prog_name = prog.code if prog else f"#{prog_id}"
-            errors.append(f"{prog_name}: {exc}")
+            logger.exception("screen_all_pending: failed for programme %s", programme_id)
 
-    flash(
-        f"Bulk screening complete: {total_recommended} recommended, "
-        f"{total_rejected} rejected across {len(groups)} programme(s).",
-        "success" if not errors else "warning",
+    # Create a batch tracking record
+    now = _dt.utcnow()
+    batch = AdmissionBatch(
+        session_id=active_session.id,
+        programme_id=first_programme_id,
+        batch_name=f"AllPending_{now.strftime('%Y%m%d_%H%M%S')}",
+        quota_category="all",
+        processed_by=current_user.id,
+        total_candidates=len(unscreened),
+        admitted_count=total_admitted,
+        rejected_count=total_rejected,
+        processed_at=now,
     )
-    for err in errors[:5]:
-        flash(f"Error — {err}", "danger")
+    db.session.add(batch)
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        logger.exception("screen_all_pending: batch commit failed")
 
-    return redirect(url_for("admission.screening_dashboard"))
+    return jsonify({
+        "success": True,
+        "sync": True,
+        "batch_id": batch.id if batch.id else None,
+        "total": len(unscreened),
+        "admitted": total_admitted,
+        "rejected": total_rejected,
+        "message": f"Screening complete: {total_admitted} recommended, {total_rejected} not recommended."
+    })
+
+
 
 
 @admission_bp.route("/screening")
@@ -176,7 +218,7 @@ def screening_status(batch_id):
 @admission_bp.route("/screening/results/<int:batch_id>")
 @login_required
 def screening_results(batch_id):
-    """View detailed batch screening results"""
+    """View detailed batch screening results & analytics report"""
     batch = AdmissionBatch.query.options(
         joinedload(AdmissionBatch.programme).joinedload(Programme.university),
         joinedload(AdmissionBatch.session)
@@ -191,24 +233,81 @@ def screening_results(batch_id):
         AdmissionRecord.programme_id == batch.programme_id
     ).order_by(AdmissionRecord.aggregate_score.desc()).all()
     
+    # Compute Analytics Metrics
+    total_records = len(records)
+    admitted_count = sum(1 for r in records if r.status in ['recommended', 'admitted'])
+    rejected_count = total_records - admitted_count
+    
+    aggregate_scores = [r.aggregate_score for r in records if r.aggregate_score is not None]
+    avg_score = round(sum(aggregate_scores) / len(aggregate_scores), 2) if aggregate_scores else 0
+    highest_score = round(max(aggregate_scores), 2) if aggregate_scores else 0
+    lowest_score = round(min(aggregate_scores), 2) if aggregate_scores else 0
+    
+    # Quota breakdown for recommended candidates
+    quota_counts = {"merit": 0, "catchment": 0, "elds": 0, "none": 0}
+    state_counts = {}
+    
+    # Score distribution bands
+    score_bands = {"80-100": 0, "70-79": 0, "60-69": 0, "50-59": 0, "<50": 0}
+    
+    for r in records:
+        if r.status in ['recommended', 'admitted']:
+            cat = (r.quota_category or 'none').lower()
+            if cat in quota_counts:
+                quota_counts[cat] += 1
+            else:
+                quota_counts['none'] += 1
+                
+        # State distribution
+        if r.candidate and r.candidate.state_of_origin:
+            st = r.candidate.state_of_origin.strip().title()
+            state_counts[st] = state_counts.get(st, 0) + 1
+
+        # Score distribution
+        score = r.aggregate_score or 0
+        if score >= 80:
+            score_bands["80-100"] += 1
+        elif score >= 70:
+            score_bands["70-79"] += 1
+        elif score >= 60:
+            score_bands["60-69"] += 1
+        elif score >= 50:
+            score_bands["50-59"] += 1
+        else:
+            score_bands["<50"] += 1
+            
+    # Sort top 10 states
+    top_states = dict(sorted(state_counts.items(), key=lambda item: item[1], reverse=True)[:10])
+
+    analytics = {
+        "avg_score": avg_score,
+        "highest_score": highest_score,
+        "lowest_score": lowest_score,
+        "quota_counts": quota_counts,
+        "score_bands": score_bands,
+        "top_states": top_states,
+        "admission_rate": round((admitted_count / total_records * 100), 1) if total_records > 0 else 0
+    }
+    
     return render_template(
         "admin/screening_results.html",
         batch=batch,
         programme=batch.programme,
         session=batch.session,
         records=records,
+        analytics=analytics,
         results={
-            "total": len(records),
-            "admitted": batch.admitted_count,
-            "rejected": batch.rejected_count,
+            "total": total_records,
+            "admitted": admitted_count,
+            "rejected": rejected_count,
             "results": [
                 {
                     "candidate_id": record.candidate_id,
-                    "candidate_name": record.candidate.full_name,
-                    "jamb_reg": record.candidate.jamb_reg_number,
-                    "state_of_origin": record.candidate.state_of_origin,
-                    "utme_score": record.candidate.utme_score,
-                    "post_utme_score": record.candidate.post_utme_score,
+                    "candidate_name": record.candidate.full_name if record.candidate else None,
+                    "jamb_reg": record.candidate.jamb_reg_number if record.candidate else None,
+                    "state_of_origin": record.candidate.state_of_origin if record.candidate else None,
+                    "utme_score": record.candidate.utme_score if record.candidate else None,
+                    "post_utme_score": record.candidate.post_utme_score if record.candidate else None,
                     "programme_name": record.programme.name if record.programme else None,
                     "programme_code": record.programme.code if record.programme else None,
                     "session_name": batch.session.name if batch.session else None,
@@ -222,6 +321,7 @@ def screening_results(batch_id):
             ]
         }
     )
+
 
 
 @admission_bp.route("/screening/result/<int:record_id>")
@@ -245,7 +345,7 @@ def override_screening_result(record_id):
     new_status = request.form.get("new_status")
     reason = request.form.get("reason", "").strip()
     
-    if not new_status or new_status not in ["admitted", "rejected"]:
+    if not new_status or new_status not in ["admitted", "recommended", "rejected"]:
         flash("Invalid status specified.", "danger")
         return redirect(request.referrer)
     
@@ -256,6 +356,8 @@ def override_screening_result(record_id):
     # Update record
     old_status = record.status
     record.status = new_status
+    if new_status in ["admitted", "recommended"]:
+        record.rejection_reason = None  # Clear reason on override
     if record.candidate:
         record.candidate.status = new_status
     
@@ -273,10 +375,24 @@ def override_screening_result(record_id):
         "admin_name": current_user.full_name
     })
     
+    # Log audit
+    from app.utils.helpers import log_audit
+    log_audit(
+        action="override_screening",
+        entity_type="Candidate",
+        entity_id=record.candidate_id,
+        details={
+            "record_id": record.id,
+            "old_status": old_status,
+            "new_status": new_status,
+            "reason": reason
+        }
+    )
+    
     db.session.commit()
     
     flash(f"Screening result overridden from {old_status} to {new_status}.", "success")
-    return redirect(url_for("admission.screening_result_detail", record_id=record_id))
+    return redirect(request.referrer or url_for("admission.screening_dashboard"))
 
 
 @admission_bp.route("/run-screening")
@@ -347,8 +463,8 @@ def merit_list_detail(programme_id):
     
     try:
         generator = MeritListGenerator(programme_id, active_session.id)
-        merit_data = generator.generate_full_list()
-        statistics = generator.get_statistics()
+        merit_data = generator.generate_full_list(persist=False)
+        statistics = generator.get_statistics(merit_data)
         approval_status = generator.get_approval_status()
         
         return render_template(
@@ -593,7 +709,7 @@ def caps_verify_candidate(candidate_id):
 @admission_bp.route("/caps/bulk-verify", methods=["POST"])
 @login_required
 def caps_bulk_verify():
-    """Dispatch bulk CAPS verification as a background task."""
+    """Bulk CAPS verification — runs synchronously."""
     data = request.get_json()
     candidate_ids = data.get('candidate_ids', [])
 
@@ -601,15 +717,33 @@ def caps_bulk_verify():
         return jsonify({'success': False, 'message': 'No candidate IDs provided'}), 400
 
     try:
-        from app.tasks import bulk_verify_candidates_task
-        task = bulk_verify_candidates_task.delay(candidate_ids)
+        candidates = Candidate.query.filter(Candidate.id.in_(candidate_ids)).all()
+        MockCAPSService.seed_from_candidates(candidates)
+
+        verified_count = 0
+        failed_count = 0
+        for candidate in candidates:
+            result = MockCAPSService.verify_candidate(candidate.jamb_reg_number)
+            candidate.caps_verified = result['verified']
+            candidate.caps_verification_date = datetime.utcnow() if result['verified'] else None
+            candidate.caps_verification_issues = result.get('issues', [])
+            candidate.caps_status = result['status']
+            if result['verified']:
+                verified_count += 1
+            else:
+                failed_count += 1
+
+        db.session.commit()
         return jsonify({
             'success': True,
-            'task_id': task.id,
-            'message': f'Verification started for {len(candidate_ids)} candidates. Poll /admission/caps/task-status/{task.id} for progress.',
+            'sync': True,
+            'verified': verified_count,
+            'failed': failed_count,
+            'message': f'Verification complete: {verified_count} verified, {failed_count} failed.'
         })
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Failed to queue task: {str(e)}'}), 500
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Verification failed: {str(e)}'}), 500
 
 
 @admission_bp.route("/caps/upload/<int:programme_id>", methods=["POST"])
@@ -686,7 +820,7 @@ def caps_task_status(task_id):
 @admission_bp.route("/merit-list/<int:programme_id>/generate-async", methods=["POST"])
 @login_required
 def generate_merit_list_async(programme_id):
-    """Trigger async merit list generation for a programme."""
+    """Trigger merit list generation for a programme — runs synchronously."""
     if current_user.role not in ["admin", "admission_officer"]:
         return jsonify({'success': False, 'message': 'Permission denied'}), 403
 
@@ -695,15 +829,19 @@ def generate_merit_list_async(programme_id):
         return jsonify({'success': False, 'message': 'No active session'}), 400
 
     try:
-        from app.tasks import generate_merit_list_task
-        task = generate_merit_list_task.delay(programme_id, active_session.id)
+        generator = MeritListGenerator(programme_id, active_session.id)
+        result = generator.generate_full_list(persist=True)
+        db.session.commit()
+        stats = generator.get_statistics(result)
         return jsonify({
             'success': True,
-            'task_id': task.id,
-            'message': f'Merit list generation queued. Poll /admission/caps/task-status/{task.id} for progress.',
+            'sync': True,
+            'total_admitted': stats.get('filled', 0),
+            'message': f'Merit list generated: {stats.get("filled", 0)} admitted.'
         })
     except Exception as e:
-        return jsonify({'success': False, 'message': f'Failed to queue task: {str(e)}'}), 500
+        db.session.rollback()
+        return jsonify({'success': False, 'message': f'Generation failed: {str(e)}'}), 500
 
 
 @admission_bp.route("/caps/acceptance/<string:jamb_reg>", methods=["POST"])
@@ -722,10 +860,11 @@ def caps_simulate_acceptance(jamb_reg):
 def caps_verification_details(candidate_id):
     """View CAPS verification details for a candidate"""
     candidate = Candidate.query.get_or_404(candidate_id)
-    comparison = {}
-    overall_match = False
-    if candidate.caps_verified:
-        overall_match = True
+
+    comparison_data = CAPSSyncService.get_candidate_caps_comparison(candidate_id)
+    comparison = comparison_data.get('comparison', {})
+    overall_match = comparison_data.get('overall_match', False)
+
     return render_template(
         "admin/caps_verification.html",
         candidate=candidate,
@@ -756,3 +895,98 @@ def caps_override(candidate_id):
         flash('Reason and confirmation are required to override.', 'warning')
 
     return redirect(url_for('admission.caps_verification_details', candidate_id=candidate.id))
+
+
+@admission_bp.route("/screening/screened")
+@login_required
+def screening_screened():
+    """List of all successfully screened/recommended candidates"""
+    page = request.args.get("page", type=int, default=1)
+    programme_id = request.args.get("programme_id", type=int)
+    
+    active_session = get_active_session()
+    if not active_session:
+        flash("No active session found.", "danger")
+        return redirect(url_for("admin.dashboard"))
+        
+    query = Candidate.query.options(
+        joinedload(Candidate.first_choice_programme).joinedload(Programme.university),
+        joinedload(Candidate.session)
+    ).filter(
+        Candidate.session_id == active_session.id,
+        Candidate.status.in_(["recommended", "admitted", "finalized", "accepted", "waiting_list"])
+    )
+    
+    # Restrict to faculty if user is faculty officer
+    if current_user.role == 'faculty_officer' and current_user.faculty_id:
+        query = query.join(Programme, Candidate.first_choice_programme_id == Programme.id)\
+                     .filter(Programme.faculty_id == current_user.faculty_id)
+                     
+    if programme_id:
+        query = query.filter(Candidate.first_choice_programme_id == programme_id)
+        
+    query = query.order_by(Candidate.utme_score.desc())
+    pagination = query.paginate(page=page, per_page=50, error_out=False)
+    
+    # Get programmes for filter dropdown
+    programmes_query = Programme.query.order_by(Programme.name.asc())
+    if current_user.role == 'faculty_officer' and current_user.faculty_id:
+        programmes_query = programmes_query.filter_by(faculty_id=current_user.faculty_id)
+    programmes = programmes_query.all()
+    
+    return render_template(
+        "admin/screening_screened.html",
+        candidates=pagination.items,
+        pagination=pagination,
+        programmes=programmes,
+        selected_programme_id=programme_id,
+        session=active_session
+    )
+
+
+@admission_bp.route("/screening/rejected")
+@login_required
+def screening_rejected():
+    """List of all candidates who failed screening"""
+    page = request.args.get("page", type=int, default=1)
+    programme_id = request.args.get("programme_id", type=int)
+    
+    active_session = get_active_session()
+    if not active_session:
+        flash("No active session found.", "danger")
+        return redirect(url_for("admin.dashboard"))
+        
+    query = Candidate.query.options(
+        joinedload(Candidate.first_choice_programme).joinedload(Programme.university),
+        joinedload(Candidate.session),
+        joinedload(Candidate.admission_records)
+    ).filter(
+        Candidate.session_id == active_session.id,
+        Candidate.status == "rejected"
+    )
+    
+    # Restrict to faculty if user is faculty officer
+    if current_user.role == 'faculty_officer' and current_user.faculty_id:
+        query = query.join(Programme, Candidate.first_choice_programme_id == Programme.id)\
+                     .filter(Programme.faculty_id == current_user.faculty_id)
+                     
+    if programme_id:
+        query = query.filter(Candidate.first_choice_programme_id == programme_id)
+        
+    query = query.order_by(Candidate.utme_score.desc())
+    pagination = query.paginate(page=page, per_page=50, error_out=False)
+    
+    # Get programmes for filter dropdown
+    programmes_query = Programme.query.order_by(Programme.name.asc())
+    if current_user.role == 'faculty_officer' and current_user.faculty_id:
+        programmes_query = programmes_query.filter_by(faculty_id=current_user.faculty_id)
+    programmes = programmes_query.all()
+    
+    return render_template(
+        "admin/screening_rejected.html",
+        candidates=pagination.items,
+        pagination=pagination,
+        programmes=programmes,
+        selected_programme_id=programme_id,
+        session=active_session
+    )

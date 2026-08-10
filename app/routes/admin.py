@@ -39,8 +39,10 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 @admin_bp.before_request
 @login_required
-def require_login():
-    return None
+def require_staff():
+    if current_user.role not in ["admin", "super_admin", "admission_officer", "faculty_officer"]:
+        from flask import abort
+        abort(403)
 
 
 def _first_university():
@@ -71,6 +73,7 @@ def _build_candidate_query(search_term=None, programme_id=None, status=None, quo
     query = Candidate.query.options(
         joinedload(Candidate.first_choice_programme).joinedload(Programme.faculty),
         joinedload(Candidate.session),
+        joinedload(Candidate.admission_records),
     )
     
     if current_user.role == 'faculty_officer' and current_user.faculty_id:
@@ -301,10 +304,20 @@ def upload_candidates():
         temp_file_path = request.form.get('temp_file_path', '').strip()
         session_id = request.form.get('session_id', type=int)
         
-        if temp_file_path and os.path.exists(temp_file_path):
-            # Import from preview - use existing temp file
-            temp_path = temp_file_path
-            filename = os.path.basename(temp_path)
+        # Enforce secure directory validation for temporary file uploads
+        temp_dir = os.path.abspath(os.path.join(current_app.config['UPLOAD_FOLDER'], 'temp'))
+        
+        if temp_file_path:
+            safe_filename = os.path.basename(temp_file_path)
+            target_path = os.path.abspath(os.path.join(temp_dir, safe_filename))
+            
+            # Prevent directory traversal and ensure the file exists within temp_dir
+            if not target_path.startswith(temp_dir + os.sep) or not os.path.exists(target_path):
+                flash('Invalid temporary file path', 'error')
+                return redirect(request.url)
+                
+            temp_path = target_path
+            filename = safe_filename
         else:
             # New file upload
             if 'file' not in request.files:
@@ -324,8 +337,8 @@ def upload_candidates():
             from werkzeug.utils import secure_filename
             
             filename = secure_filename(file.filename)
-            temp_path = os.path.join(current_app.config['UPLOAD_FOLDER'], 'temp', filename)
-            os.makedirs(os.path.dirname(temp_path), exist_ok=True)
+            temp_path = os.path.join(temp_dir, filename)
+            os.makedirs(temp_dir, exist_ok=True)
             file.save(temp_path)
         
         try:
@@ -353,18 +366,32 @@ def upload_candidates():
                     session_id=session.id
                 )
             else:
-                # Full import
-                result = processor.process_file(temp_path, session.id)
-                
-                flash(f'Import complete! Created: {result["created"]}, '
-                      f'Skipped: {result["skipped"]}, Errors: {result["errors"]}', 
-                      'success' if result['errors'] == 0 else 'warning')
-                
-                if result['error_details']:
-                    for error in result['error_details'][:5]:
-                        flash(f'Error: {error}', 'error')
-                
-                return redirect(url_for('admin.candidates'))
+                # Full import (synchronous — runs directly in the request)
+                summary = processor.process_file(temp_path, session.id)
+
+                # Prevent cleanup in finally (process_file already reads the file)
+                temp_path = None
+
+                is_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+                if is_ajax:
+                    # Preview page submits via AJAX and expects JSON with a task_id-like response
+                    return jsonify({
+                        'success': True,
+                        'task_id': 'sync',
+                        'message': 'Import completed',
+                        'summary': summary
+                    })
+                else:
+                    # Upload page submits a regular form — redirect with flash
+                    created = summary.get('created', 0)
+                    skipped = summary.get('skipped', 0)
+                    errors  = summary.get('errors', 0)
+                    flash(
+                        f'Import complete: {created} candidate(s) created, '
+                        f'{skipped} skipped, {errors} error(s).',
+                        'success' if created > 0 else 'warning'
+                    )
+                    return redirect(url_for('admin.candidates'))
                 
         except ValueError as e:
             flash(str(e), 'error')
@@ -719,6 +746,9 @@ def university_config():
         university.max_olevel_sittings = form.max_olevel_sittings.data
         university.min_utme_score = form.min_utme_score.data
         university.grade_points = json.loads(form.grade_points_json.data)
+        university.primary_color = form.primary_color.data.strip()
+        university.secondary_color = form.secondary_color.data.strip()
+        university.logo_url = form.logo_url.data.strip() if form.logo_url.data else None
 
         db.session.commit()
         flash("University configuration saved successfully.", "success")

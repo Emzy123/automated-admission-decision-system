@@ -23,6 +23,42 @@ class ScreeningEngine:
         self.session_id = session_id
         self.grade_points = self.university.grade_points or DEFAULT_GRADE_POINTS
     
+    def normalize_subject(self, name: str) -> str:
+        """Normalize subject names to resolve variations in spelling/abbreviations"""
+        if not name:
+            return ""
+        import re
+        n = name.strip().lower()
+        # Remove common suffixes/prefixes like "Language", "Lang", "Use of"
+        n = re.sub(r'\b(language|lang|use\s+of)\b', '', n).strip()
+        n = re.sub(r'\s+', ' ', n)  # clean up double spaces
+        
+        mappings = {
+            'maths': 'mathematics',
+            'math': 'mathematics',
+            'mth': 'mathematics',
+            'further maths': 'further mathematics',
+            'further math': 'further mathematics',
+            'lit in english': 'literature in english',
+            'lit in eng': 'literature in english',
+            'literature': 'literature in english',
+            'civic': 'civic education',
+            'gov': 'government',
+            'govt': 'government',
+            'bio': 'biology',
+            'chem': 'chemistry',
+            'phy': 'physics',
+            'eco': 'economics',
+            'geo': 'geography',
+            'agric science': 'agricultural science',
+            'agric': 'agricultural science',
+            'crs': 'christian religious studies',
+            'crk': 'christian religious studies',
+            'irs': 'islamic religious studies',
+            'irk': 'islamic religious studies',
+        }
+        return mappings.get(n, n)
+
     def check_utme_cutoff(self, candidate: Candidate) -> Dict[str, Any]:
         """Check if UTME score meets departmental minimum"""
         min_score = self.programme.min_utme_score or self.university.min_utme_score
@@ -35,18 +71,24 @@ class ScreeningEngine:
         }
     
     def check_subject_combination(self, candidate: Candidate) -> Dict[str, Any]:
-        """Verify JAMB subject combination matches programme requirements"""
-        required = set(self.programme.required_utme_subjects or [])
-        taken = set(candidate.utme_subjects.keys()) if candidate.utme_subjects else set()
+        """Verify JAMB subject combination matches programme requirements, supporting compound subjects"""
+        required = self.programme.required_utme_subjects or []
+        taken = set(self.normalize_subject(s) for s in (candidate.utme_subjects.keys() if candidate.utme_subjects else []))
         
-        missing = required - taken
+        missing = []
+        for req in required:
+            # Handle compound subjects like 'Chemistry/Economics'
+            options = [self.normalize_subject(opt) for opt in req.split('/')]
+            if not any(opt in taken for opt in options):
+                missing.append(req)
+                
         passed = len(missing) == 0
         
         return {
             'passed': passed,
             'required': list(required),
-            'taken': list(taken),
-            'missing': list(missing),
+            'taken': list(candidate.utme_subjects.keys() if candidate.utme_subjects else []),
+            'missing': missing,
             'message': f"Subjects: {'Valid' if passed else f'Missing {missing}'}"
         }
     
@@ -65,7 +107,8 @@ class ScreeningEngine:
         mandatory_failed = []
         
         for subject in mandatory:
-            subject_credits = [r for r in credits if r.subject.lower() == subject.lower()]
+            normalized_target = self.normalize_subject(subject)
+            subject_credits = [r for r in credits if self.normalize_subject(r.subject) == normalized_target]
             if subject_credits:
                 best_grade = max(subject_credits, key=lambda x: self.grade_points.get(x.grade.upper(), 0))
                 mandatory_passed.append({'subject': subject, 'grade': best_grade.grade})
@@ -110,13 +153,13 @@ class ScreeningEngine:
         # Get best grades per subject across sittings
         subject_best = {}
         for r in results:
-            subject = r.subject.lower()
+            subject = self.normalize_subject(r.subject)
             points = self.grade_points.get(r.grade.upper(), 0)
             if subject not in subject_best or points > subject_best[subject]:
                 subject_best[subject] = points
         
         # Get relevant subjects (mandatory + best others)
-        mandatory = [s.lower() for s in (self.programme.mandatory_olevel_subjects or [])]
+        mandatory = [self.normalize_subject(s) for s in (self.programme.mandatory_olevel_subjects or [])]
         
         mandatory_points = []
         for subj in mandatory:
@@ -145,9 +188,9 @@ class ScreeningEngine:
     def calculate_aggregate(self, candidate: Candidate) -> Dict[str, Any]:
         """Calculate aggregate score based on CUSTECH formula"""
         
-        # CUSTECH formula: (JAMB / 8) + (Post-UTME / 2)
-        jamb_divisor = 8.0
-        post_utme_divisor = 2.0  # CUSTECH uses 2, not 4
+        # Read aggregate divisors dynamically from university configuration in database
+        jamb_divisor = self.university.jamb_divisor or 8.0
+        post_utme_divisor = self.university.post_utme_divisor or 2.0
         
         jamb_comp = candidate.utme_score / jamb_divisor
         
@@ -239,12 +282,12 @@ class ScreeningEngine:
             return agg['aggregate']
         elif field == "olevel_english":
             for r in candidate.olevel_results:
-                if r.subject.lower() == "english":
+                if self.normalize_subject(r.subject) == "english":
                     return self.grade_points.get(r.grade.upper(), 0)
             return 0
         elif field == "olevel_math":
             for r in candidate.olevel_results:
-                if r.subject.lower() == "mathematics":
+                if self.normalize_subject(r.subject) == "mathematics":
                     return self.grade_points.get(r.grade.upper(), 0)
             return 0
         elif field == "state_of_origin":

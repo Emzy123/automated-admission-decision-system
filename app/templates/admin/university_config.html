@@ -93,9 +93,29 @@
         <hr class="my-4">
         <h5 class="mb-2">Grade Point Mapping</h5>
         <p class="small text-muted">Example: A1=8, B2=7, B3=6, C4=5, C5=4, C6=3</p>
-        <div class="mb-3">
+        <div class="mb-4">
             {{ form.grade_points_json(class="form-control font-monospace" + (" is-invalid" if form.grade_points_json.errors else ""), rows="7") }}
             {% for error in form.grade_points_json.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+        </div>
+
+        <hr class="my-4">
+        <h5 class="mb-3">Branding & Appearance</h5>
+        <div class="row g-3">
+            <div class="col-md-4">
+                <label class="form-label">{{ form.primary_color.label.text }}</label>
+                {{ form.primary_color(class="form-control form-control-color w-100" + (" is-invalid" if form.primary_color.errors else ""), type="color") }}
+                {% for error in form.primary_color.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">{{ form.secondary_color.label.text }}</label>
+                {{ form.secondary_color(class="form-control form-control-color w-100" + (" is-invalid" if form.secondary_color.errors else ""), type="color") }}
+                {% for error in form.secondary_color.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">{{ form.logo_url.label.text }}</label>
+                {{ form.logo_url(class="form-control" + (" is-invalid" if form.logo_url.errors else ""), placeholder="e.g. /static/images/custech-logo.png") }}
+                {% for error in form.logo_url.errors %}<div class="invalid-feedback">{{ error }}</div>{% endfor %}
+            </div>
         </div>
     </div>
     <div class="card-footer bg-white d-flex justify-content-end">

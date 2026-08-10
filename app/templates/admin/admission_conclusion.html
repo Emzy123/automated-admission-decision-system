@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+{% block title %}Session Management & Conclusion{% endblock %}
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3 mt-2">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Session Management</li>
+        </ol>
+    </nav>
+
+    <!-- Page Title -->
+    <div class="mb-4">
+        <h1 class="h3 mb-1">Session Management &amp; Conclusion</h1>
+        <p class="text-muted mb-0">Prepare report exports, conclude the active session, perform cleanup, and initialize new academic rounds.</p>
+    </div>
+
+    <!-- Active Session Overview -->
+    <div class="row g-3 mb-4">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fa-solid fa-calendar-day text-primary me-2"></i>Active Session Status
+                    </h5>
+                    {% if active_session %}
+                        <span class="badge bg-success px-3 py-2 border-0">ACTIVE: {{ active_session.name }}</span>
+                    {% else %}
+                        <span class="badge bg-danger px-3 py-2 border-0">NO ACTIVE SESSION</span>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if active_session %}
+                        <div class="row text-center mb-4 mt-2">
+                            <div class="col-6 col-md-3">
+                                <div class="border rounded p-3 bg-light">
+                                    <div class="h2 mb-1 fw-bold text-dark">{{ stats.total }}</div>
+                                    <small class="text-muted">Total Candidates</small>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="border rounded p-3 bg-light">
+                                    <div class="h2 mb-1 fw-bold text-success">{{ stats.admitted }}</div>
+                                    <small class="text-muted">Admitted</small>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="border rounded p-3 bg-light">
+                                    <div class="h2 mb-1 fw-bold text-danger">{{ stats.rejected }}</div>
+                                    <small class="text-muted">Rejected</small>
+                                </div>
+                            </div>
+                            <div class="col-6 col-md-3">
+                                <div class="border rounded p-3 bg-light">
+                                    <div class="h2 mb-1 fw-bold text-warning">{{ stats.pending }}</div>
+                                    <small class="text-muted">Pending</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h6 class="fw-bold mb-3">Conclude and Clean Up Active Session</h6>
+                        <p class="text-muted small">
+                            Concluding the session will deactivate it, preventing further modifications to this year's merit lists or candidate files.
+                            This will also erase temporary uploaded CSV files in the server uploads folder, ensuring proper system cleanup.
+                        </p>
+                        
+                        <div class="alert alert-warning border-start border-warning border-3 d-flex align-items-center mb-4">
+                            <i class="fa-solid fa-circle-exclamation text-warning fa-2x me-3"></i>
+                            <div class="small">
+                                <strong>Important:</strong> Download the admitted report and rejected candidates manual check report before concluding this session.
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="{{ url_for('conclusion.export_admitted') }}" class="btn btn-success">
+                                <i class="fa-solid fa-file-excel me-2"></i>Download Admitted Candidates Report
+                            </a>
+                            <a href="{{ url_for('conclusion.export_rejected') }}" class="btn btn-outline-danger">
+                                <i class="fa-solid fa-file-circle-xmark me-2"></i>Download Rejected (Manual Check) Report
+                            </a>
+                            <form method="POST" action="{{ url_for('conclusion.conclude') }}" class="d-inline"
+                                  onsubmit="return confirm('⚠️ CRITICAL WARNING: You are concluding and archiving the academic session \'{{ active_session.name }}\'.\n\nThis will set the session status to inactive and erase all temporary files in the upload directory. Make sure you downloaded your reports first!\n\nConfirm session conclusion?');">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fa-solid fa-box-archive me-2"></i>Conclude &amp; Archive Session
+                                </button>
+                            </form>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-5">
+                            <i class="fa-solid fa-calendar-xmark fa-4x text-muted mb-3"></i>
+                            <h5>No active admission session configured.</h5>
+                            <p class="text-muted">Create a new academic session on the right or activate an existing one from the list below to begin admissions.</p>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Create Session Card -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="fa-solid fa-circle-plus text-primary me-2"></i>New Academic Round
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('conclusion.index') }}">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <input type="hidden" name="action" value="create_session">
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Academic Session Name</label>
+                            <input type="text" class="form-control" name="name" required placeholder="e.g. 2026/2027" pattern="^\d{4}\/\d{4}$" title="Expected format is YYYY/YYYY (e.g. 2026/2027)">
+                            <small class="form-text text-muted">Format: YYYY/YYYY (e.g., 2026/2027)</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Start Date</label>
+                            <input type="date" class="form-control" name="start_date" required value="{{ today_str }}">
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">End Date</label>
+                            <input type="date" class="form-control" name="end_date" required value="{{ today_str }}">
+                        </div>
+
+                        <div class="form-check mb-4">
+                            <input class="form-check-input" type="checkbox" name="make_active" value="true" id="makeActiveCheck" checked>
+                            <label class="form-check-label fw-bold" for="makeActiveCheck">
+                                Set as currently active session
+                            </label>
+                            <div class="small text-muted">Setting this active will archive the current active session.</div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="fa-solid fa-play me-2"></i>Launch Session Round
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sessions List -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 fw-bold">
+                <i class="fa-solid fa-list-check text-primary me-2"></i>Academic Session Rounds History
+            </h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Session Name</th>
+                        <th>Start Date</th>
+                        <th>End Date</th>
+                        <th>Status</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for session in sessions %}
+                        <tr>
+                            <td>{{ session.id }}</td>
+                            <td class="fw-bold">{{ session.name }}</td>
+                            <td>{{ session.start_date.strftime('%B %d, %Y') if session.start_date else '-' }}</td>
+                            <td>{{ session.end_date.strftime('%B %d, %Y') if session.end_date else '-' }}</td>
+                            <td>
+                                {% if session.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">Archived</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end">
+                                {% if not session.is_active %}
+                                    <form method="POST" action="{{ url_for('conclusion.activate', session_id=session.id) }}" class="d-inline">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-primary" onclick="return confirm('Change active session to {{ session.name }}? This will deactivate the current active session.');">
+                                            <i class="fa-solid fa-power-off me-1"></i>Activate
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <button type="button" class="btn btn-sm btn-success" disabled>
+                                        <i class="fa-solid fa-check me-1"></i>Currently Active
+                                    </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

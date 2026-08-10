@@ -44,7 +44,7 @@ class RegisterUserForm(FlaskForm):
 def admin_required(view_func):
     @wraps(view_func)
     def wrapped(*args, **kwargs):
-        if current_user.role != "admin":
+        if current_user.role not in ["admin", "super_admin"]:
             abort(403)
         return view_func(*args, **kwargs)
 

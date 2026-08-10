@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Screened Candidates{% endblock %}
+{% block content %}
+<div class="container-fluid px-4">
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3 mt-2">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('admin.dashboard') }}">Dashboard</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('admission.screening_dashboard') }}">Screening</a></li>
+            <li class="breadcrumb-item active" aria-current="page">Screened Candidates</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h1 class="h3 mb-1">Screening Dashboard</h1>
+            <p class="text-muted mb-0">Successfully screened candidates in session: {{ session.name }}</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('admin.candidates') }}" class="btn btn-outline-primary btn-sm">
+                <i class="fa-solid fa-users me-1"></i>All Candidates
+            </a>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link fw-bold" href="{{ url_for('admission.screening_dashboard') }}">
+                <i class="fa-solid fa-hourglass-start me-1"></i> Unscreened Candidates
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link active fw-bold text-success" href="{{ url_for('admission.screening_screened') }}">
+                <i class="fa-solid fa-circle-check me-1 text-success"></i> Screened Candidates
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link fw-bold" href="{{ url_for('admission.screening_rejected') }}">
+                <i class="fa-solid fa-circle-xmark me-1 text-danger"></i> Rejected Candidates
+            </a>
+        </li>
+    </ul>
+
+    <!-- Filters Section -->
+    <div class="card border-0 shadow-sm mb-3">
+        <div class="card-header bg-white">
+            <h6 class="mb-0">Filter by Programme</h6>
+        </div>
+        <div class="card-body">
+            <form method="get" id="filterForm">
+                <div class="row g-2 align-items-end">
+                    <div class="col-md-9">
+                        <select class="form-select form-select-sm" name="programme_id">
+                            <option value="">All Programmes</option>
+                            {% for programme in programmes %}
+                                <option value="{{ programme.id }}" {% if selected_programme_id == programme.id %}selected{% endif %}>
+                                    {{ programme.name }} ({{ programme.code }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary btn-sm w-100">
+                            <i class="fa-solid fa-filter me-1"></i>Apply Filter
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Table -->
+    <div class="card border-0 shadow-sm">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="text-nowrap">JAMB Reg</th>
+                        <th class="text-nowrap">Full Name</th>
+                        <th class="text-nowrap">State</th>
+                        <th class="text-nowrap">UTME</th>
+                        <th class="text-nowrap">Post-UTME</th>
+                        <th class="text-nowrap">Programme Choice</th>
+                        <th class="text-nowrap">Status</th>
+                        <th class="text-end text-nowrap">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if candidates %}
+                        {% for candidate in candidates %}
+                            <tr>
+                                <td><code>{{ candidate.jamb_reg_number }}</code></td>
+                                <td>
+                                    <a href="{{ url_for('admin.candidate_detail', id=candidate.id) }}" class="fw-bold text-decoration-none">
+                                        {{ candidate.full_name }}
+                                    </a>
+                                </td>
+                                <td>{{ candidate.state_of_origin or '-' }}</td>
+                                <td><span class="badge bg-primary">{{ candidate.utme_score }}</span></td>
+                                <td>
+                                    {% if candidate.post_utme_present %}
+                                        <span class="badge bg-secondary">{{ candidate.post_utme_score or 'N/A' }}</span>
+                                    {% else %}
+                                        <span class="text-muted small">Not Taken</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if candidate.first_choice_programme %}
+                                        {{ candidate.first_choice_programme.name }} ({{ candidate.first_choice_programme.code }})
+                                    {% else %}
+                                        <span class="text-muted">Not Set</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if candidate.status == 'admitted' %}
+                                        <span class="badge bg-success">Admitted</span>
+                                    {% else %}
+                                        <span class="badge bg-info">Recommended</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('admin.candidate_detail', id=candidate.id) }}" class="btn btn-sm btn-outline-secondary">
+                                        <i class="fa-solid fa-eye me-1"></i>View File
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="8" class="text-center py-5">
+                                <div class="text-muted">
+                                    <i class="fa-solid fa-clipboard-check fa-3x mb-3 text-muted"></i>
+                                    <p class="mb-0">No screened candidates found matching the selected filters.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if pagination.pages > 1 %}
+    <nav aria-label="Candidates pagination" class="mt-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="small text-muted">
+                Showing {{ pagination.items|length }} of {{ pagination.total }} candidates
+            </div>
+            <ul class="pagination pagination-sm mb-0">
+                {% if pagination.has_prev %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admission.screening_screened', page=pagination.prev_num, programme_id=selected_programme_id) }}">Previous</a>
+                    </li>
+                {% endif %}
+                {% for page_num in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                    {% if page_num %}
+                        <li class="page-item {{ 'active' if page_num == pagination.page else '' }}">
+                            <a class="page-link" href="{{ url_for('admission.screening_screened', page=page_num, programme_id=selected_programme_id) }}">{{ page_num }}</a>
+                        </li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                    {% endif %}
+                {% endfor %}
+                {% if pagination.has_next %}
+                    <li class="page-item">
+                        <a class="page-link" href="{{ url_for('admission.screening_screened', page=pagination.next_num, programme_id=selected_programme_id) }}">Next</a>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
